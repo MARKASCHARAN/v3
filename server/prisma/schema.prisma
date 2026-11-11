@@ -1,0 +1,220 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                   String                @id @default(uuid())
+  email                String                @unique
+  name                 String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  goals                Goal[]
+  tasks                Task[]
+  timeBlocks           TimeBlock[]
+  memories             Memory[]
+  preferences          UserPreference[]
+  conversationMessages ConversationMessage[]
+  reminders            Reminder[]
+  accountabilityLogs   AccountabilityLog[]
+  plans                Plan[]
+
+  @@map("users")
+}
+
+model Goal {
+  id                 String              @id @default(uuid())
+  userId             String
+  parentGoalId       String?
+  title              String
+  description        String?
+  category           String
+  timeframe          String              @default("YEARLY")
+  targetYear         Int?
+  targetDate         DateTime?
+  status             String              @default("ACTIVE")
+  progress           Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentGoal         Goal?               @relation("GoalHierarchy", fields: [parentGoalId], references: [id], onDelete: SetNull)
+  subGoals           Goal[]              @relation("GoalHierarchy")
+  milestones         Milestone[]
+  tasks              Task[]
+  timeBlocks         TimeBlock[]
+  reminders          Reminder[]
+  accountabilityLogs AccountabilityLog[]
+  plans              Plan[]
+
+  @@map("goals")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  goalId      String
+  title       String
+  description String?
+  order       Int       @default(0)
+  targetDate  DateTime?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@map("milestones")
+}
+
+model Task {
+  id                 String              @id @default(uuid())
+  userId             String
+  goalId             String?
+  milestoneId        String?
+  parentTaskId       String?
+  title              String
+  description        String?
+  priority           String              @default("MEDIUM")
+  status             String              @default("TODO")
+  dueDate            DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal               Goal?               @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  milestone          Milestone?          @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  parentTask         Task?               @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks           Task[]              @relation("TaskSubtasks")
+  timeBlocks         TimeBlock[]
+  reminders          Reminder[]
+  accountabilityLogs AccountabilityLog[]
+
+  @@map("tasks")
+}
+
+model TimeBlock {
+  id             String   @id @default(uuid())
+  userId         String
+  taskId         String?
+  goalId         String?
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  category       String   @default("WORK")
+  status         String   @default("SCHEDULED")
+  isRecurring    Boolean  @default(false)
+  recurrenceRule String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task           Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goal           Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@map("time_blocks")
+}
+
+model Reminder {
+  id          String    @id @default(uuid())
+  userId      String
+  taskId      String?
+  goalId      String?
+  title       String
+  message     String?
+  remindAt    DateTime
+  status      String    @default("PENDING")
+  channel     String    @default("IN_APP")
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goal        Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@map("reminders")
+}
+
+model AccountabilityLog {
+  id         String    @id @default(uuid())
+  userId     String
+  taskId     String?
+  goalId     String?
+  type       String
+  status     String    @default("OPEN")
+  notes      String?
+  detectedAt DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goal       Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@map("accountability_logs")
+}
+
+model Memory {
+  id         String                  @id @default(uuid())
+  userId     String
+  title      String?
+  content    String
+  category   String                  @default("GENERAL")
+  tags       String[]                @default([])
+  importance Int                     @default(1)
+  embedding  Unsupported("vector")?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("memories")
+}
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  value     String
+  category  String   @default("GENERAL")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("user_preferences")
+}
+
+model ConversationMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  sessionId String   @default("default")
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_messages")
+}
+
+model Plan {
+  id             String    @id @default(uuid())
+  userId         String
+  goalId         String?
+  title          String
+  summary        String
+  status         String    @default("DRAFT")
+  milestonesData Json
+  tasksData      Json
+  provider       String?
+  model          String?
+  appliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal           Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@map("plans")
+}
