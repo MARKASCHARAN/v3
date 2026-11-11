@@ -1,0 +1,282 @@
+# V3 Development Roadmap
+
+This document defines V3's target technology stack, repository scope, and three-phase engineering roadmap.
+
+## Scope & Repository Model
+
+- **Repository strategy:** Option B — one Git repository, ordinary `npm`, a modular monolithic backend (`server/`), and separate web (`client/web/`) and mobile (`client/mobile/`) clients. No pnpm, Nx, Turborepo, npm workspaces, or microservices.
+- **Initial product scope:** The **12 original feature groups** remain V3's initial product scope.
+- **Milestone ordering:** The three phases below are engineering milestones ordered by technical dependencies rather than assigning four arbitrary features per phase.
+- **Out-of-scope expansions:** Additional researched features numbered 13 onwards (daily briefing, opportunity radar, career agent, travel assistant, etc.) remain outside these three initial phases and may be planned separately later.
+- **Dependency discipline:** The stack below is the target architecture, not a requirement to install every library on day one.
+
+## Full Technology Stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Main language | TypeScript | Backend, website, and mobile |
+| Runtime | Node.js 24 LTS | Backend runtime |
+| Backend framework | Express 5 | REST API |
+| Backend architecture | Modular monolith | Feature-based modules |
+| Web framework | Next.js App Router | Website and dashboard |
+| Web UI | React + Tailwind CSS | Interface and styling |
+| Mobile framework | React Native + Expo | Future iOS and Android app |
+| Package manager | npm | Install dependencies independently |
+| Database | PostgreSQL | Application data |
+| Database hosting | Supabase | Managed PostgreSQL |
+| ORM | Prisma | Database queries and migrations |
+| Validation | Zod | Validate API requests and data |
+| API documentation | OpenAPI / Swagger | Document REST endpoints |
+| Authentication | Supabase Auth (proposed) | User authentication |
+| AI integration | Vercel AI SDK + provider adapters | Model calls and tool integration |
+| Agent orchestration | LangGraph.js (later, if needed) | Stateful, multi-step agent workflows |
+| Memory search | PostgreSQL + pgvector | Semantic memory retrieval |
+| Background jobs | Trigger.dev (proposed) | Scheduled and long-running tasks |
+| File storage | Supabase Storage | Documents and attachments |
+| Email | Resend | Email notifications |
+| Voice and Indian languages | Bhashini | ASR, TTS, translation, and related services |
+| Testing | Vitest + Supertest | Unit and API testing |
+| Code quality | ESLint + Prettier | Linting and formatting |
+| Version control | Git + GitHub | Source control |
+| CI | GitHub Actions | Automated tests and builds |
+
+### Key Technical References
+
+- Next.js supports TypeScript natively and recommends App Router for new web applications.
+- Expo supports TypeScript directly, enabling mobile development without changing backend languages.
+- LangGraph.js provides persistent state, human approval checkpoints, and long-running agent workflows, deferred until agent workflows require stateful orchestration.
+- Prisma provides TypeScript-first PostgreSQL modeling, queries, and migrations.
+
+---
+
+## Phase 1 — Foundation and Core Personal Management
+
+**Objective:** Build the functioning V3 backend foundation and the essential goal and task management system.
+
+### A. Project Initialization
+
+- [ ] Create GitHub repository `v3` *(local `.git` initialized; GitHub remote and initial commit pending)*
+- [x] Create `server`, `client/web`, `client/mobile`, and `docs` directories
+- [x] Initialize Express + TypeScript backend
+- [x] Initialize Next.js website
+- [x] Configure `npm` and TypeScript independently per application
+- [x] Configure ESLint and Prettier (`server/eslint.config.mjs`, `server/.prettierrc`, `client/web/eslint.config.mjs`)
+- [x] Configure environment variables (`server/.env.example`, `server/.env`, and Zod env validation)
+- [x] Configure Git ignore rules (`.gitignore`)
+- [x] Set up development and production configurations (`app.config.ts`)
+- [x] Establish API versioning (`/api/v1`)
+
+### B. Backend Foundation
+
+- [x] Configure Express application (`helmet`, `cors`, JSON parsing, request logging)
+- [x] Configure middleware and error handling (`AppError`, `errorHandler`)
+- [x] Configure request validation using Zod (`validation.middleware.ts`)
+- [x] Configure structured logging (`pino` / `pino-http`)
+- [x] Configure CORS and security headers
+- [x] Configure authentication (`auth.middleware.ts` `requireAuth` and `auth` module endpoints)
+- [x] Connect PostgreSQL (`server/src/database/prisma.ts` verified against Supabase PostgreSQL 17.11 with `@prisma/adapter-pg`)
+- [x] Set up Prisma and database migrations (`schema.prisma`, `prisma.config.ts`, `pgvector` extension, and initial migration `20261111233814_init` applied)
+- [x] Establish database conventions
+- [x] Create health-check endpoint (`GET /api/v1/health`)
+- [x] Create API documentation (OpenAPI / Swagger at `/api/docs` and `docs/api.md`)
+- [x] Establish testing conventions (`Vitest` + `Supertest`)
+
+### C. Core Phase 1 Features
+
+| Original Feature | Work to Implement | Status |
+| --- | --- | --- |
+| 01. Goal management | Goal hierarchy, yearly goals, milestones, and progress | Done (backend API + milestone progress sync + web UI) |
+| 02. AI planning | Goal decomposition, plans, milestones, and task suggestions | Done (backend API + Vercel AI SDK Google provider + web UI) |
+| 03. Scheduling | Calendar model, time blocks, and scheduling logic | Done (backend API + overlap detection & slot suggestions + web UI) |
+| 04. Task management | Tasks, subtasks, priorities, deadlines, and statuses | Done (backend API + subtasks/deadlines + web UI) |
+| 05. Accountability | Missed-task detection, reminders, and progress tracking | Done (backend API + missed-task scan, reminders, progress summary + web UI) |
+| 08. Memory | User preferences, project context, conversation history, and memory retrieval | Done (backend API + preferences, context search, conversation history + web UI) |
+
+### D. Website Foundation
+
+- [x] Create basic website structure
+- [x] Configure routing and layouts
+- [x] Create authentication pages (`/login`, `/register`)
+- [x] Create dashboard shell (`DashboardShell` in `/dashboard`)
+- [x] Create API communication layer (`src/lib/api-client.ts`, `src/lib/v3-api.ts`, `src/lib/auth-storage.ts`)
+- [x] Implement goals interface (`/dashboard/goals`)
+- [x] Implement task-management interface (`/dashboard/tasks`)
+- [x] Implement calendar and schedule interface (`/dashboard/schedule`)
+- [x] Implement progress display (`/dashboard`, plus `/dashboard/planning` and `/dashboard/memory`)
+
+### Phase 1 Deliverable
+
+A functioning personal management system where users can create goals, convert them into tasks, organize schedules, track progress, and retain useful personal context, with initial AI planning working through the backend and accessible from the web dashboard.
+
+---
+
+## Phase 2 — Autonomous AI, Communication and Integrations
+
+**Objective:** Transform V3 from a personal management application into an intelligent assistant that can communicate and perform approved actions.
+
+### A. AI Intelligence
+
+- Integrate primary AI model via Vercel AI SDK
+- Build provider abstraction (`server/src/ai/providers/`)
+- Implement central AI orchestrator
+- Implement agent/tool execution framework (`server/src/ai/agents/`, `server/src/ai/tools/`)
+- Implement prompt management (`server/src/ai/prompts/`)
+- Implement conversation context
+- Implement structured tool calling
+- Implement multi-step workflows (`server/src/ai/workflows/`)
+- Implement execution history
+- Implement human approval and permission checks
+- Implement AI failure handling and retry logic
+
+### B. Original Features Continued
+
+| Original Feature | Work to Implement |
+| --- | --- |
+| 05. Accountability | Adaptive accountability, procrastination detection, and intelligent interventions |
+| 08. Memory | Long-term memory, semantic retrieval (`pgvector`), and personalization |
+| 09. Research | Web research, summarization, and knowledge retrieval |
+| 11. Automation | Multi-step workflows and autonomous tool execution |
+
+### C. Communications and Voice
+
+| Original Feature | Work to Implement |
+| --- | --- |
+| 06. Notifications | Telegram, email, Discord, and WhatsApp integrations |
+| 07. Voice and calling | Speech input, speech output, voice commands, and telephony integration |
+
+Additional communication and voice deliverables:
+
+- Telegram bot
+- Email notification service (Resend)
+- Discord bot
+- WhatsApp Cloud API integration
+- Bhashini ASR integration
+- Bhashini TTS integration
+- Bhashini translation integration
+- Voice conversation workflow
+- Scheduled reminders
+- Notification preferences and frequency controls
+- Background job execution (Trigger.dev or equivalent)
+- Delivery tracking and retry handling
+
+### D. Cloud Infrastructure
+
+- Configure backend deployment
+- Configure database production environment
+- Configure scheduled jobs
+- Configure cloud file storage (Supabase Storage)
+- Configure secrets management
+- Configure CI/CD (GitHub Actions)
+- Implement backup and recovery procedures
+
+### Phase 2 Deliverable
+
+V3 can understand requests, remember useful information, plan work, communicate through connected messaging channels, interact via voice, send proactive reminders, and execute approved workflows.
+
+---
+
+## Phase 3 — Advanced Autonomy, Developer Operations and Complete Product
+
+**Objective:** Complete the remaining initial feature scope, strengthen reliability, and deliver the mobile application.
+
+### A. Remaining Original Feature Groups
+
+| Original Feature | Work to Implement |
+| --- | --- |
+| 09. Research | Advanced research workflows and continuous monitoring |
+| 10. Developer assistant | GitHub integration, repository monitoring, issues, and pull requests |
+| 11. Autonomous execution | Advanced multi-step workflows, scheduling, and recovery |
+| 12. Analytics | Productivity reports, goal analytics, and personal insights |
+
+### B. Advanced Agent Capabilities
+
+- Introduce LangGraph.js if workflow complexity justifies it
+- Implement specialist agents
+- Implement agent delegation
+- Implement stateful workflow execution
+- Implement long-running tasks
+- Implement approval checkpoints
+- Implement workflow interruption and resumption
+- Implement scheduled autonomous routines
+- Implement agent activity audit logs
+- Implement safe retries and duplicate-action prevention
+
+### C. Developer and GitHub Assistant
+
+- GitHub OAuth / application integration
+- Repository monitoring
+- Issue and pull-request tracking
+- CI / build failure notifications
+- Commit and activity summaries
+- Development task tracking
+- AI-assisted code and repository research
+
+### D. Analytics and Reporting
+
+- Goal-completion analytics
+- Task-completion analytics
+- Weekly and monthly reports
+- Time allocation insights
+- Productivity trends
+- Missed-deadline analysis
+- AI-generated improvement recommendations
+
+### E. Mobile Application
+
+- Initialize and configure React Native + Expo (`client/mobile/` base scaffold present)
+- Connect mobile app to Express API
+- Implement authentication
+- Implement dashboard
+- Implement goals and task management
+- Implement push notifications
+- Implement voice interactions
+- Implement mobile-specific permissions
+- Test Android and iOS
+- Prepare mobile deployment
+
+### F. Production Readiness
+
+- Security review
+- API rate limiting
+- Database performance optimization
+- Integration tests
+- End-to-end tests
+- Error monitoring
+- Usage and cost monitoring
+- Deployment automation
+- Documentation updates
+- Production backup and recovery testing
+
+### Phase 3 Deliverable
+
+A complete V3 ecosystem featuring web and mobile clients, developer assistant, analytics, reliable autonomous workflows, and integrated communication channels.
+
+---
+
+## Overall Roadmap Summary
+
+1. **Phase 1 — Foundation and Core Management:** Repository setup, Express API foundation, PostgreSQL + Prisma, authentication, core modules (goals, AI planning, scheduling, tasks, initial accountability and memory), and Next.js web dashboard.
+2. **Phase 2 — Intelligence and Communication:** AI agents, semantic memory, adaptive accountability, research, voice (Bhashini), multi-channel notifications, background jobs, cloud infra, and automation workflows.
+3. **Phase 3 — Advanced Autonomy and Mobile:** GitHub developer assistant, advanced stateful agent workflows, analytics, Expo mobile application, testing, security, and production hardening.
+
+## Open Decisions Pending Finalization
+
+These proposed choices remain open for final confirmation before database schema design and feature implementation begin:
+
+| Decision Area | Current Recommendation |
+| --- | --- |
+| Database | Supabase PostgreSQL |
+| ORM | Prisma |
+| Authentication | Supabase Auth |
+| AI provider | Provider-independent integration |
+| AI framework | Start simple; LangGraph.js later if needed |
+| Background jobs | Trigger.dev |
+| API | REST with OpenAPI |
+| Memory | PostgreSQL + pgvector |
+| Mobile | Expo + React Native |
+| Deployment | Managed cloud hosting |
+
+## Next Step Before Feature Coding
+
+Review and confirm or rearrange the three-phase allocation above. Once finalized, complete database schema modeling, dependency verification, and middleware setup before implementing Phase 1 modules.
+

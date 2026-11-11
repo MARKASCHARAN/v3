@@ -1,0 +1,32 @@
+# --- Global & OS Artifacts ---
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# --- Server (Express / Prisma / Node) ---
+server/node_modules/
+server/dist/
+server/prisma/migrations/sqlite/ # (if ever using sqlite locally)
+server/.env
+server/.env.*
+!server/.env.example
+
+# --- Client Web (Next.js) ---
+client/web/node_modules/
+client/web/.next/
+client/web/out/
+client/web/build/
+client/web/.env*.local
+
+# --- Client Mobile (Expo / React Native - Future) ---
+client/mobile/node_modules/
+client/mobile/.expo/
+client/mobile/dist/
+client/mobile/ios/
+client/mobile/android/
+client/mobile/.env*
+
+# --- Documentation Build / Temp ---
+docs/.temp/
