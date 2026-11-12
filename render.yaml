@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: v3-server
+    runtime: docker
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: '5000'
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: INTEGRATION_ENCRYPTION_KEY
+        sync: false
+      - key: TRIGGER_SECRET_KEY
+        sync: false
+      - key: TRIGGER_PROJECT_ID
+        sync: false
+      - key: LANGSMITH_TRACING
+        value: 'true'
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        value: v3-production
+      - key: WEB_ORIGIN
+        sync: false
+
+  - type: web
+    name: v3-web
+    runtime: node
+    rootDir: client/web
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+

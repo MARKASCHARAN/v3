@@ -135,7 +135,7 @@ A functioning personal management system where users can create goals, convert t
 - [x] Implement background autonomy & event routing (`DomainEvent` & `BackgroundJob` Prisma models, `server/src/modules/events/`, Trigger.dev jobs under `server/src/jobs/` for daily accountability review, missed-task scans, approval expiry sweeps, background agent runs, and dead-letter recovery in M2.7)
 - [x] Implement external integrations, multi-channel notifications, voice & MCP (`IntegrationAccount` with AES-256-GCM encryption, `notifications` via Resend/Telegram/Discord/WhatsApp, `voice` via Bhashini ASR/TTS/translation + Supabase Storage + telephony, Google Calendar/Gmail & GitHub adapters, and permission-guarded `server/src/ai/mcp/` in M2.8)
 - [x] Implement safety guardrails, observability, rate limits & evaluation datasets (`<untrusted_external_data>` boundaries, secret redaction, `costMicroUsd` + LangSmith trace URLs on `AiExecution`, `GET /api/v1/automation/metrics`, per-user/endpoint rate limiters, `server/src/ai/evaluation/`, and adversarial tests in M2.9)
-- [ ] Complete Milestone `2.10` (GitHub Actions CI/CD, production deployment/backup verification, and 5 end-to-end autonomous acceptance scenarios)
+- [x] Complete Milestone `2.10` — GitHub Actions CI/CD (`.github/workflows/ci.yml`), cloud deployment manifests (`server/Dockerfile`, `render.yaml`, `docs/deployment.md`), live backup/recovery verification (`npm run db:verify-recovery`), and end-to-end tests (`server/tests/acceptance.e2e.test.ts`) across all 5 autonomous acceptance scenarios
 
 ### B. Original Features Continued
 
@@ -170,13 +170,13 @@ Additional communication and voice deliverables:
 
 ### D. Cloud Infrastructure
 
-- Configure backend deployment
-- Configure database production environment
-- Configure scheduled jobs
-- Configure cloud file storage (Supabase Storage)
-- Configure secrets management
-- Configure CI/CD (GitHub Actions)
-- Implement backup and recovery procedures
+- [x] Configure backend container & cloud deployment manifests (`server/Dockerfile`, `render.yaml`, [`docs/deployment.md`](deployment.md))
+- [x] Configure database production migrations & pgvector HNSW/GIN + LangGraph checkpointer verification (`npm run db:verify-recovery`)
+- [x] Configure scheduled jobs via Trigger.dev (`server/src/jobs/`)
+- [x] Configure cloud file storage via Supabase Storage (`voice-assets` bucket)
+- [x] Configure secrets management & AES-256-GCM integration encryption (`INTEGRATION_ENCRYPTION_KEY`)
+- [x] Configure CI/CD via GitHub Actions (`.github/workflows/ci.yml`)
+- [x] Document & verify backup and recovery procedures (`docs/deployment.md`, `verify-backup-recovery.ts`)
 
 ### Phase 2 Deliverable
 
@@ -285,7 +285,7 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 | Mobile | Expo + React Native (Phase 3) |
 | Deployment | Managed cloud hosting |
 
-## Next Phase 2 Engineering Step
+## Next Phase Engineering Step
 
-Milestone `2.9` (Safety & Observability) is complete. Proceed to **Milestone `2.10` (End-to-End Autonomous System & CI/CD)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Phase 2 milestones `2.1`–`2.10` are complete. Proceed to **Phase 3** (Analytics module, extended Developer/GitHub monitoring, and Expo Mobile application) when ready.
 

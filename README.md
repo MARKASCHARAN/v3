@@ -2,7 +2,7 @@
 
 V3 is a modular personal management and autonomous AI assistant platform built with TypeScript across a monolithic Express backend, a Next.js web dashboard, and an Expo mobile client.
 
-> **Repository Status:** Documentation and initial repository scaffold only. Feature modules, database schemas, and application business logic have not been implemented yet.
+> **Repository Status:** Phase 1 Foundation and Phase 2 Autonomous Hybrid Intelligence (`Milestones 2.1–2.10`) are implemented on the backend (`server/`) alongside the Phase 1 Next.js web dashboard (`client/web/`) and CI/CD + cloud deployment manifests. Mobile (`client/mobile/`) and Phase 3 analytics modules remain scheduled for Phase 3.
 
 ## Repository Strategy (Option B)
 
@@ -162,7 +162,7 @@ Never commit `.env` files or API credentials. Service-role keys and AI provider 
 
 Install dependencies and run scripts independently inside each app directory:
 
-- **Backend (`server/`)**: `npm install`, `npm run dev`, `npm run build`, `npm start`, `npm test`, `npm run db:generate`, `npm run db:migrate`, `npm run db:studio`
+- **Backend (`server/`)**: `npm install`, `npm run dev`, `npm run build`, `npm start`, `npm test`, `npm run db:generate`, `npm run db:migrate`, `npm run db:verify-recovery`, `npm run db:studio`
 - **Web (`client/web/`)**: `npm install`, `npm run dev`, `npm run build`, `npm start`, `npm run lint`
 - **Mobile (`client/mobile/`)**: `npm install`, `npm start`, `npm run android`, `npm run ios`, `npm run web`, `npm run lint`
 
@@ -178,4 +178,5 @@ Install dependencies and run scripts independently inside each app directory:
 - [Architecture](docs/architecture.md) — Modular monolith design, backend/frontend structure, AI layer, and coding standards
 - [API Reference](docs/api.md) — Versioning, error envelope, current endpoints, and planned module endpoints
 - [Database Guide](docs/database.md) — Supabase PostgreSQL, Prisma setup, pgvector strategy, and domain entities
+- [Deployment & Recovery](docs/deployment.md) — Cloud containerization, GitHub Actions CI/CD, Trigger.dev, and Supabase backup/recovery verification
 

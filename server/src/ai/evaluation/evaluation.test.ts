@@ -41,4 +41,3 @@ describe('Agent Evaluation & Observability Suite (M2.9)', () => {
     expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 });
-

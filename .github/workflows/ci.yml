@@ -1,0 +1,99 @@
+name: V3 CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  server-ci:
+    name: Backend CI (Typecheck, Lint, Format, Tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      NODE_ENV: test
+      PORT: 5000
+      WEB_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/v3_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/v3_test
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      LANGSMITH_TRACING: false
+      LANGSMITH_PROJECT: v3-backend
+      LANGSMITH_ENDPOINT: https://api.smith.langchain.com
+      INTEGRATION_ENCRYPTION_KEY: ci-test-integration-encryption-key-32bytes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Enforce zero comments in server source and tests
+        run: |
+          if grep -rnE '(^|[[:space:]])//|/\*' src tests; then
+            echo "Code comments are disallowed in server/src and server/tests"
+            exit 1
+          fi
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: ESLint check
+        run: npm run lint
+
+      - name: Run unit, adversarial, evaluation, and E2E acceptance tests
+        run: npm test
+
+  web-ci:
+    name: Web Client CI (Lint & Production Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/web
+    env:
+      NEXT_PUBLIC_API_URL: https://api.v3.example.com/api/v1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Run web ESLint
+        run: npm run lint
+
+      - name: Build Next.js production bundle
+        run: npm run build
+
