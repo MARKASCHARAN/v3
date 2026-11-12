@@ -66,4 +66,3 @@ export class ResendEmailAdapter implements EmailAdapter {
     };
   }
 }
-

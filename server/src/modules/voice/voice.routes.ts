@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { voicePipelineRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { VoiceController } from './voice.controller';
 import {
@@ -33,10 +34,20 @@ router.get(
   validateRequest({ params: voiceSessionIdParamSchema }),
   controller.getSession
 );
-router.post('/transcribe', validateRequest({ body: transcribeVoiceSchema }), controller.transcribe);
+router.post(
+  '/transcribe',
+  voicePipelineRateLimiter,
+  validateRequest({ body: transcribeVoiceSchema }),
+  controller.transcribe
+);
 router.post('/translate', validateRequest({ body: translateVoiceSchema }), controller.translate);
 router.post('/synthesize', validateRequest({ body: synthesizeVoiceSchema }), controller.synthesize);
-router.post('/command', validateRequest({ body: voiceCommandSchema }), controller.processCommand);
+router.post(
+  '/command',
+  voicePipelineRateLimiter,
+  validateRequest({ body: voiceCommandSchema }),
+  controller.processCommand
+);
 router.post(
   '/telephony/webhook',
   validateRequest({ body: telephonyWebhookSchema }),

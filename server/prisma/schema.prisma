@@ -257,7 +257,9 @@ model AiExecution {
   model               String?
   tokenBudget         Int?
   tokensUsed          Int              @default(0)
+  costMicroUsd        Int              @default(0)
   langsmithTraceId    String?
+  langsmithTraceUrl   String?
   checkpointNamespace String?
   timeoutAt           DateTime?
   responseText        String?

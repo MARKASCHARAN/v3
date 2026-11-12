@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { wrapUntrustedExternalData } from '../../guardrails/prompt-injection.guard';
 import { IntegrationsService } from '../../../modules/integrations/integrations.service';
 import {
   deliveriesQuerySchema,
@@ -111,11 +112,23 @@ export const COMMUNICATION_EXTERNAL_TOOLS: V3ToolContract[] = [
     inputSchema: listGmailArgsSchema,
     outputSchema: z.array(z.record(z.string(), z.unknown())),
     toolSchema: listGmailToolSchema,
-    execute: (ctx, input) =>
-      integrationsService.listGmailMessages(
+    execute: async (ctx, input) => {
+      const messages = await integrationsService.listGmailMessages(
         ctx.userId,
         input as z.infer<typeof listGmailArgsSchema>
-      ),
+      );
+      return messages.map((msg) => ({
+        id: msg.id,
+        threadId: msg.threadId,
+        receivedAt: msg.receivedAt,
+        from: msg.from,
+        wrappedContent: wrapUntrustedExternalData({
+          sourceType: 'EMAIL',
+          sourceId: msg.id,
+          origin: msg.from,
+          content: `Subject: ${msg.subject}\n\n${msg.snippet}`,
+        }),
+      }));
+    },
   } as V3ToolContract,
 ];
-

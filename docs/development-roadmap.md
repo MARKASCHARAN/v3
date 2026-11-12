@@ -134,7 +134,8 @@ A functioning personal management system where users can create goals, convert t
 - [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, stuck-loop replanning, and circuit breaker)
 - [x] Implement background autonomy & event routing (`DomainEvent` & `BackgroundJob` Prisma models, `server/src/modules/events/`, Trigger.dev jobs under `server/src/jobs/` for daily accountability review, missed-task scans, approval expiry sweeps, background agent runs, and dead-letter recovery in M2.7)
 - [x] Implement external integrations, multi-channel notifications, voice & MCP (`IntegrationAccount` with AES-256-GCM encryption, `notifications` via Resend/Telegram/Discord/WhatsApp, `voice` via Bhashini ASR/TTS/translation + Supabase Storage + telephony, Google Calendar/Gmail & GitHub adapters, and permission-guarded `server/src/ai/mcp/` in M2.8)
-- [ ] Complete Milestone `2.9`–`2.10` hybrid architecture rollout (safety guards, cost/LangSmith accounting, evaluation datasets, and CI/CD)
+- [x] Implement safety guardrails, observability, rate limits & evaluation datasets (`<untrusted_external_data>` boundaries, secret redaction, `costMicroUsd` + LangSmith trace URLs on `AiExecution`, `GET /api/v1/automation/metrics`, per-user/endpoint rate limiters, `server/src/ai/evaluation/`, and adversarial tests in M2.9)
+- [ ] Complete Milestone `2.10` (GitHub Actions CI/CD, production deployment/backup verification, and 5 end-to-end autonomous acceptance scenarios)
 
 ### B. Original Features Continued
 
@@ -286,5 +287,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.8` (External Integrations) is complete. Proceed to **Milestone `2.9` (Safety & Observability)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.9` (Safety & Observability) is complete. Proceed to **Milestone `2.10` (End-to-End Autonomous System & CI/CD)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

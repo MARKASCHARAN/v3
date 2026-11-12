@@ -93,7 +93,8 @@ The `server/src/ai/` directory separates autonomous reasoning from deterministic
 - `memory/` — Hybrid SQL + PostgreSQL FTS + `pgvector` RRF retrieval (`hybrid-retrieval.ts`), candidate validation/extraction (`extraction.ts`), and lifecycle consolidation (`consolidation.ts`).
 - `prompts/` — Central prompt registry (`prompt.registry.ts`) and system context builders.
 - `workflows/` — Retry handling (`retry.workflow.ts`) and multi-step execution pipelines.
-- `mcp/` & `evaluation/` (`evaluation/` planned M2.9) — Model Context Protocol server/client (`V3McpServer`, `McpClient`, `McpPermissionBridge` gated by `permission-guard.ts`).
+- `mcp/` — Model Context Protocol server/client (`V3McpServer`, `McpClient`, `McpPermissionBridge` gated by `permission-guard.ts`).
+- `guardrails/`, `observability/` & `evaluation/` — Untrusted external data boundary sanitization (`<untrusted_external_data>`), recursive secret redaction, Gemini token-to-`costMicroUsd` accounting + LangSmith trace links, and regression evaluation datasets (`evaluation/datasets.ts`, `evaluator.ts`).
 
 ### Integrations, Notifications & Voice (`server/src/integrations/` & `server/src/modules/{integrations,notifications,voice}/`)
 

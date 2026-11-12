@@ -4,8 +4,16 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 import { Prisma } from '@prisma/client';
 import { aiConfig, configureLangSmithRuntime } from '../../config/ai.config';
 import { prisma } from '../../database/prisma';
+import {
+  redactSecretsInObject,
+  redactSensitiveSecrets,
+} from '../guardrails/prompt-injection.guard';
 import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
 import { retrieveHybridMemoryContext, toRetrievedContextSlice } from '../memory/hybrid-retrieval';
+import {
+  buildLangSmithTraceUrl,
+  estimateModelCostMicroUsd,
+} from '../observability/cost-accounting';
 import { AiProviderName, ModelTaskTier, resolveChatModel } from '../providers/model-router';
 import { ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import { GraphApprovalPolicy } from '../runtime/graph-factory';
@@ -123,6 +131,7 @@ export interface OrchestratorPersistence {
     idempotencyKey?: string;
     tokenBudget: number;
     langsmithTraceId?: string;
+    langsmithTraceUrl?: string;
     timeoutAt?: Date;
     prompt: string;
     provider?: string;
@@ -154,7 +163,9 @@ export interface OrchestratorPersistence {
       errorMessage?: string;
       attempts?: number;
       tokensUsed?: number;
+      costMicroUsd?: number;
       langsmithTraceId?: string;
+      langsmithTraceUrl?: string;
       stepsData?: ExecutionStepTrace[];
     }
   ): Promise<unknown>;
@@ -241,6 +252,7 @@ const prismaPersistence: OrchestratorPersistence = {
         idempotencyKey: data.idempotencyKey,
         tokenBudget: data.tokenBudget,
         langsmithTraceId: data.langsmithTraceId,
+        langsmithTraceUrl: data.langsmithTraceUrl,
         timeoutAt: data.timeoutAt,
         prompt: data.prompt,
         status: 'RUNNING',
@@ -300,7 +312,9 @@ const prismaPersistence: OrchestratorPersistence = {
         errorMessage: data.errorMessage,
         attempts: data.attempts,
         tokensUsed: data.tokensUsed,
+        costMicroUsd: data.costMicroUsd,
         langsmithTraceId: data.langsmithTraceId,
+        langsmithTraceUrl: data.langsmithTraceUrl,
         stepsData: data.stepsData as unknown as Prisma.InputJsonValue | undefined,
         completedAt: new Date(),
       },
@@ -331,6 +345,7 @@ export class AssistantOrchestrator {
       ? Math.min(params.maxSteps, specialist.profile.maxIterations)
       : params.maxSteps;
     const langsmithTraceId = langsmithEnabled ? randomUUID() : undefined;
+    const langsmithTraceUrl = buildLangSmithTraceUrl(langsmithTraceId) ?? undefined;
 
     const context = await this.persistence.loadContext(params.userId, params.sessionId);
     const execution = await this.persistence.createExecution({
@@ -342,6 +357,7 @@ export class AssistantOrchestrator {
       idempotencyKey: params.idempotencyKey,
       tokenBudget,
       langsmithTraceId,
+      langsmithTraceUrl,
       timeoutAt: params.timeoutAt,
       prompt: params.prompt,
       provider: params.provider,
@@ -452,10 +468,13 @@ export class AssistantOrchestrator {
       ) => {
         await this.persistence.completeExecution(subId, {
           status: data.status,
-          responseText: data.responseText,
-          errorMessage: data.errorMessage,
+          responseText: data.responseText ? redactSensitiveSecrets(data.responseText) : undefined,
+          errorMessage: data.errorMessage ? redactSensitiveSecrets(data.errorMessage) : undefined,
           tokensUsed: data.tokensUsed,
-          stepsData: data.stepsData as ExecutionStepTrace[] | undefined,
+          costMicroUsd: estimateModelCostMicroUsd({ tokensUsed: data.tokensUsed ?? 0 }),
+          stepsData: data.stepsData
+            ? redactSecretsInObject(data.stepsData as ExecutionStepTrace[])
+            : undefined,
         });
       },
     };
@@ -511,21 +530,30 @@ export class AssistantOrchestrator {
         content: responseText,
       });
 
+      const traceId = output.langsmithTraceId ?? langsmithTraceId;
+      const traceUrl = buildLangSmithTraceUrl(traceId) ?? langsmithTraceUrl;
+      const costMicroUsd = estimateModelCostMicroUsd({
+        modelId: output.model,
+        tokensUsed: output.tokensUsed,
+      });
+
       return this.persistence.completeExecution(execution.id, {
         status,
         provider: output.provider,
         model: output.model,
-        responseText,
+        responseText: redactSensitiveSecrets(responseText),
         attempts: output.attempts,
         tokensUsed: output.tokensUsed,
-        langsmithTraceId: output.langsmithTraceId ?? langsmithTraceId,
-        stepsData: output.steps,
+        costMicroUsd,
+        langsmithTraceId: traceId,
+        langsmithTraceUrl: traceUrl,
+        stepsData: redactSecretsInObject(output.steps),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI execution failed';
       await this.persistence.completeExecution(execution.id, {
         status: 'FAILED',
-        errorMessage: message,
+        errorMessage: redactSensitiveSecrets(message),
       });
       throw error;
     }
@@ -626,10 +654,14 @@ export class AssistantOrchestrator {
       status,
       provider: descriptor.provider,
       model: descriptor.modelId,
-      responseText: output.text,
+      responseText: redactSensitiveSecrets(output.text),
       attempts: output.attempts,
       tokensUsed: output.tokensUsed,
-      stepsData: output.steps,
+      costMicroUsd: estimateModelCostMicroUsd({
+        modelId: descriptor.modelId,
+        tokensUsed: output.tokensUsed,
+      }),
+      stepsData: redactSecretsInObject(output.steps),
     });
   }
 }

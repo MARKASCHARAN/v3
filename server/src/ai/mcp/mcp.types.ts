@@ -36,4 +36,3 @@ export interface McpJsonRpcResponse {
     data?: unknown;
   };
 }
-

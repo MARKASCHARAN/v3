@@ -512,10 +512,11 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Implemented `server/src/modules/voice/` (`Bhashini` ASR/TTS/translation + Supabase Storage `voice-assets` bucket + `StandardTelephonyAdapter`) under `/api/v1/voice`.
 - [x] Implemented `server/src/ai/mcp/` (`V3McpServer`, `McpClient`, and `McpPermissionBridge` gated by `permission-guard.ts`), registered external tools in `server/src/ai/tools/external/`, and wired `COMMUNICATION` and `DEVELOPER` specialist profiles/prompts.
 
-### Milestone `2.9` — Safety & Observability
-- Add prompt-injection boundary wrappers (`<untrusted_external_data>` sanitization) for emails, web pages, and GitHub issues.
-- Integrate LangSmith trace links on `AiExecution`, token/cost accounting (`costMicroUsd`), rate limits per user/endpoint, and agent evaluation regression datasets in `server/src/ai/evaluation/`.
-- Run adversarial security tests (prompt injection, unauthorized tool access, secret redaction, infinite loop termination).
+### Milestone `2.9` — Safety & Observability (Completed)
+- [x] Implemented prompt-injection boundary wrappers (`<untrusted_external_data>` sanitization and signal detection) in `server/src/ai/guardrails/prompt-injection.guard.ts` across fetched web pages, Gmail messages, and GitHub issues/PRs, plus secret redaction across tool outputs, execution errors, and HTTP error responses.
+- [x] Added `costMicroUsd` and `langsmithTraceUrl` columns to `AiExecution` (`20261112180000_add_execution_cost_and_trace_url`), cost estimation in `server/src/ai/observability/cost-accounting.ts`, and `GET /api/v1/automation/metrics`.
+- [x] Implemented per-user/per-endpoint sliding rate limiting (`server/src/middleware/rate-limit.middleware.ts`) across global API, AI execution, research, notification, and voice endpoints.
+- [x] Added evaluation regression datasets & LangSmith dataset sync in `server/src/ai/evaluation/` plus adversarial security tests (`server/src/ai/guardrails/adversarial.test.ts`).
 
 ### Milestone `2.10` — End-to-End Autonomous System & CI/CD
 - Add GitHub Actions CI/CD workflow (`.github/workflows/ci.yml`), production cloud deployment config, backup/recovery verification, and end-to-end tests covering all 5 acceptance scenarios (Productivity, Research, Communication, Developer Assistance, Continuous Autonomy).
@@ -524,5 +525,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.9` (Safety & Observability)** by adding prompt-injection boundary wrappers (`<untrusted_external_data>` sanitization), token/cost accounting (`costMicroUsd`), LangSmith trace links on `AiExecution`, per-user/endpoint rate limiting, evaluation regression datasets in `server/src/ai/evaluation/`, and adversarial security tests.
+1. Begin **Milestone `2.10` (End-to-End Autonomous System & CI/CD)** by adding `.github/workflows/ci.yml`, production deployment & backup verification docs/scripts, and full end-to-end tests across all 5 acceptance scenarios.
 

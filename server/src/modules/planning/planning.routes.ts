@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { aiExecutionRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { PlanningController } from './planning.controller';
 import {
@@ -16,7 +17,12 @@ const controller = new PlanningController();
 
 router.use(requireAuth);
 
-router.post('/generate', validateRequest({ body: generatePlanSchema }), controller.generate);
+router.post(
+  '/generate',
+  aiExecutionRateLimiter,
+  validateRequest({ body: generatePlanSchema }),
+  controller.generate
+);
 router.get('/plans', validateRequest({ query: plansQuerySchema }), controller.getAll);
 router.post('/plans', validateRequest({ body: createPlanSchema }), controller.create);
 router.get('/plans/:id', validateRequest({ params: planIdParamSchema }), controller.getOne);

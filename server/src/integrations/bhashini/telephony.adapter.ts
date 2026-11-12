@@ -103,4 +103,3 @@ export class StandardTelephonyAdapter implements TelephonyAdapter {
     };
   }
 }
-

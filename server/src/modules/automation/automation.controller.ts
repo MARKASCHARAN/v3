@@ -33,6 +33,12 @@ export class AutomationController {
     res.status(200).json({ success: true, data: agents });
   };
 
+  getMetrics = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const metrics = await this.automationService.getObservabilityMetrics(userId);
+    res.status(200).json({ success: true, data: metrics });
+  };
+
   run = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = this.getUserId(req);
     const execution = await this.automationService.runAssistant(

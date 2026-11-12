@@ -51,4 +51,3 @@ export const deliveriesQuerySchema = z.object({
 export const deliveryIdParamSchema = z.object({
   id: z.string().uuid('Invalid delivery ID'),
 });
-

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { redactSensitiveSecrets } from '../ai/guardrails/prompt-injection.guard';
 import { env } from '../config/env';
 
 export class AppError extends Error {
@@ -36,19 +37,22 @@ export const errorHandler = (
       success: false,
       error: {
         code: err.code,
-        message: err.message,
+        message: redactSensitiveSecrets(err.message),
       },
     });
     return;
   }
 
-  console.error('Unhandled error:', err);
+  console.error('Unhandled error:', redactSensitiveSecrets(err.message));
 
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message,
+      message:
+        env.NODE_ENV === 'production'
+          ? 'An unexpected error occurred'
+          : redactSensitiveSecrets(err.message),
     },
   });
 };

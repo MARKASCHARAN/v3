@@ -84,4 +84,3 @@ export class SupabaseVoiceStorage implements VoiceAssetStorage {
     return data.signedUrl;
   }
 }
-

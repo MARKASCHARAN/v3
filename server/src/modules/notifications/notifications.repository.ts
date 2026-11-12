@@ -193,4 +193,3 @@ export class NotificationsRepository {
     return user?.email ?? null;
   }
 }
-

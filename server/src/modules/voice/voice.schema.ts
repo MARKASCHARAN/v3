@@ -73,4 +73,3 @@ export const voiceSessionsQuerySchema = z.object({
   status: voiceSessionStatusSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
-

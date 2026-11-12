@@ -537,6 +537,15 @@ const swaggerDocument = {
         },
       },
     },
+    '/automation/metrics': {
+      get: {
+        summary:
+          'Retrieve per-user AI observability metrics (token totals, costMicroUsd, approvals, LangSmith traces)',
+        responses: {
+          '200': { description: 'Observability metrics returned' },
+        },
+      },
+    },
     '/automation/approvals/{id}/approve': {
       post: {
         summary: 'Approve and execute a pending AI tool call',

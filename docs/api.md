@@ -173,6 +173,7 @@ Defined in `server/src/modules/automation/automation.routes.ts` and mounted on `
 
 - `GET /api/v1/automation/tools` — List registered AI tools and risk policies (`READ`, `INTERNAL_WRITE`, etc.)
 - `GET /api/v1/automation/agents` — List registered specialist AI agents, model tiers, and scoped `AgentPermissionProfile` metadata
+- `GET /api/v1/automation/metrics` — Retrieve per-user AI execution counts, `totalTokensUsed`, `totalCostMicroUsd`, approval statuses, and LangSmith trace URLs
 - `POST /api/v1/automation/run` — Run the central AI orchestrator or a targeted specialist (`agentRole`, optional `threadId`/`tokenBudget`) with multi-step tool calling, retries, and approval gating
 - `GET /api/v1/automation/executions` — List AI execution history (`status`, `sessionId`, `limit` filters)
 - `GET /api/v1/automation/executions/:id` — Retrieve a single AI execution with step traces and approvals
@@ -253,7 +254,7 @@ Defined in `server/src/modules/voice/voice.routes.ts` and mounted on `v1Router`:
 - **Security Headers:** Applied globally via `helmet`.
 - **Authentication (`requireAuth`):** Implemented in `server/src/middleware/auth.middleware.ts`; verifies Supabase Auth bearer tokens (`Authorization: Bearer <token>`) and upserts user records via Prisma.
 - **Validation Middleware (`validateRequest`):** Implemented in `server/src/middleware/validation.middleware.ts`; validates request `body`, `query`, and `params` against module Zod schemas.
-- **Rate Limiting (Planned):** Configuration skeleton exists in `appConfig.rateLimit` (`windowMs: 15 minutes`, `max: 100` in production, `1000` otherwise).
+- **Rate Limiting (`server/src/middleware/rate-limit.middleware.ts`):** Active per-user (authenticated `user.id` or fallback IP) and per-endpoint rate limiting across global API routes and tight limits on AI execution, web research, outbound notifications, and voice command pipelines (`429 RATE_LIMIT_EXCEEDED` with `X-RateLimit-*` and `Retry-After` headers).
 
 ## API Modules by Phase
 

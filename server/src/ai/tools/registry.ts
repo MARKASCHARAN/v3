@@ -1,6 +1,7 @@
 import { StructuredToolInterface, tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { AppError } from '../../middleware/error.middleware';
+import { redactSecretsInObject } from '../guardrails/prompt-injection.guard';
 import {
   assertNoCrossUserPayload,
   assertValidToolUserContext,
@@ -154,7 +155,7 @@ export const buildLangChainTools = (params: {
         return JSON.stringify({
           status: 'EXECUTED',
           toolName: contract.name,
-          data: result,
+          data: redactSecretsInObject(result),
         });
       },
       {

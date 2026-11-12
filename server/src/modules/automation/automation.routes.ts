@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { aiExecutionRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { AutomationController } from './automation.controller';
 import {
@@ -17,7 +18,13 @@ router.use(requireAuth);
 
 router.get('/tools', controller.listTools);
 router.get('/agents', controller.listAgents);
-router.post('/run', validateRequest({ body: runAssistantSchema }), controller.run);
+router.get('/metrics', controller.getMetrics);
+router.post(
+  '/run',
+  aiExecutionRateLimiter,
+  validateRequest({ body: runAssistantSchema }),
+  controller.run
+);
 router.get(
   '/executions',
   validateRequest({ query: executionsQuerySchema }),

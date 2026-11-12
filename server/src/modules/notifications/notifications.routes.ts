@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { externalNotificationRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { NotificationsController } from './notifications.controller';
 import {
@@ -27,6 +28,7 @@ router.get(
 );
 router.post(
   '/send',
+  externalNotificationRateLimiter,
   validateRequest({ body: sendNotificationSchema }),
   controller.sendNotification
 );
@@ -37,4 +39,3 @@ router.post(
 );
 
 export const notificationsRouter = router;
-

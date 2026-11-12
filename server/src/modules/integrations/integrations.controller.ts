@@ -140,4 +140,3 @@ export class IntegrationsController {
     res.status(200).json({ success: true, data: result });
   };
 }
-

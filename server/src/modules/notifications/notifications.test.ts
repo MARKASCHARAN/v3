@@ -142,4 +142,3 @@ describe('Notifications Module (M2.8)', () => {
     expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 });
-

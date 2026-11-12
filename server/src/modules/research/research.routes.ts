@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.middleware';
+import { researchRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { ResearchController } from './research.controller';
 import {
@@ -14,7 +15,12 @@ const controller = new ResearchController();
 
 router.use(requireAuth);
 
-router.post('/search', validateRequest({ body: conductResearchSchema }), controller.conduct);
+router.post(
+  '/search',
+  researchRateLimiter,
+  validateRequest({ body: conductResearchSchema }),
+  controller.conduct
+);
 router.get('/', validateRequest({ query: researchQuerySchema }), controller.getAll);
 router.post('/', validateRequest({ body: createResearchSchema }), controller.create);
 router.get('/:id', validateRequest({ params: researchIdParamSchema }), controller.getOne);

@@ -40,4 +40,3 @@ export interface VoiceCommandRunner {
     prompt: string;
   }): Promise<{ executionId: string; responseText: string }>;
 }
-

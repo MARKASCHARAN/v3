@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { globalApiRateLimiter } from '../middleware/rate-limit.middleware';
 import { accountabilityRouter } from '../modules/accountability/accountability.routes';
 import { authRouter } from '../modules/auth/auth.routes';
 import { automationRouter } from '../modules/automation/automation.routes';
@@ -14,6 +15,8 @@ import { tasksRouter } from '../modules/tasks/tasks.routes';
 import { voiceRouter } from '../modules/voice/voice.routes';
 
 const router = Router();
+
+router.use(globalApiRateLimiter);
 
 router.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({

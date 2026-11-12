@@ -43,6 +43,10 @@ export class AutomationService {
     return listSpecialistAgentsMetadata();
   }
 
+  getObservabilityMetrics(userId: string) {
+    return this.automationRepository.getObservabilityMetrics(userId);
+  }
+
   async runAssistant(userId: string, input: RunAssistantInput) {
     return this.orchestrator.run({
       userId,
