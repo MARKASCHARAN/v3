@@ -473,11 +473,11 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Port `planning.service.ts`, `research.service.ts`, `memory.service.ts`, and `AssistantOrchestrator` to `@langchain/google-genai` + `@langchain/langgraph`, removing `ai` and `@ai-sdk/google`.
 - [x] Verify end-to-end LangGraph `PostgresSaver` checkpointed run against Supabase PostgreSQL + Gemini + Vitest suite.
 
-### Milestone `2.2` — Tool & Permission Framework
-- Implement `server/src/permissions/risk-policy.ts` and `permission-guard.ts` enforcing the 5 risk levels (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`).
-- Refactor `server/src/ai/tools/` into `internal/`, `external/`, and `registry.ts` using `V3ToolContract` with strict Zod input/output schemas and idempotency keys.
-- Wire LangGraph `interrupt()` and `Command({ resume })` into `/api/v1/automation/approvals/:id/approve|reject` with `expiresAt` expiry support.
-- Test invalid payloads, cross-user isolation, duplicate idempotency keys, and approval pause/resume.
+### Milestone `2.2` — Tool & Permission Framework (Completed)
+- [x] Implement `server/src/permissions/risk-policy.ts` and `permission-guard.ts` enforcing the 5 risk levels (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`).
+- [x] Refactor `server/src/ai/tools/` into `internal/`, `external/`, and `registry.ts` using `V3ToolContract` with strict Zod input/output schemas, Gemini-compatible `toolSchema` wrappers, and idempotency keys.
+- [x] Wire LangGraph `interrupt()` and `Command({ resume })` into `approvalGateNode` and `/api/v1/automation/approvals/:id/approve|reject` with `expiresAt` expiry support (`20261112005424_extend_tool_approvals_for_risk_and_idempotency`).
+- [x] Test invalid payloads, cross-user isolation, duplicate idempotency keys, expiry rejection, and live `PostgresSaver` approval pause/resume.
 
 ### Milestone `2.3` — Main Orchestrator
 - Build `server/src/ai/runtime/orchestrator.ts` implementing the 8-step adaptive loop (Receive → Context → Reason/Plan → Select Agents/Tools → Execute → Observe → Evaluate → Adapt).
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.2` (Tool & Permission Framework)** by adding `server/src/permissions/risk-policy.ts` and `permission-guard.ts` with all 5 risk levels (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`), `V3ToolContract`, and LangGraph `interrupt()` / `Command({ resume })` integration.
+1. Begin **Milestone `2.3` (Main Orchestrator)** by implementing `server/src/ai/runtime/orchestrator.ts` (8-step adaptive Receive -> Context -> Reason/Plan -> Select -> Execute -> Observe -> Evaluate -> Adapt loop with token budget guard, iteration circuit breaker, and fallback summary generation) integrated with `AssistantOrchestrator`.
 

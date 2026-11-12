@@ -8,12 +8,16 @@ import {
 } from '../../ai/agents/assistant.agent';
 import { getPromptDefinition } from '../../ai/prompts/prompt.registry';
 import { buildAssistantSystemContext } from '../../ai/prompts/assistant.prompt';
-import { V3_TOOL_REGISTRY, executeRegisteredTool } from '../../ai/tools/v3.tools';
+import {
+  V3_TOOL_REGISTRY,
+  executeRegisteredTool,
+  listRegisteredToolsMetadata,
+} from '../../ai/tools/registry';
 import { withAiRetry } from '../../ai/workflows/retry.workflow';
 import { AppError } from '../../middleware/error.middleware';
 import { AutomationService } from './automation.service';
 import { AutomationRepository } from './automation.repository';
-import { runAssistantSchema } from './automation.schema';
+import { aiApprovalStatusSchema, runAssistantSchema } from './automation.schema';
 
 describe('Phase 2 AI & Automation Module', () => {
   describe('Prompt Registry & Context', () => {
@@ -69,9 +73,14 @@ describe('Phase 2 AI & Automation Module', () => {
   });
 
   describe('Tool Permissions & AssistantOrchestrator', () => {
-    it('defines read tools as AUTO_EXECUTE and write tools as REQUIRE_APPROVAL', () => {
-      expect(V3_TOOL_REGISTRY.listGoals?.policy).toBe('AUTO_EXECUTE');
-      expect(V3_TOOL_REGISTRY.createTask?.policy).toBe('REQUIRE_APPROVAL');
+    it('defines read tools as READ/AUTO_EXECUTE and write tools as INTERNAL_WRITE/REQUIRE_APPROVAL', () => {
+      expect(V3_TOOL_REGISTRY.listGoals?.riskLevel).toBe('READ');
+      expect(V3_TOOL_REGISTRY.createTask?.riskLevel).toBe('INTERNAL_WRITE');
+
+      const metadata = listRegisteredToolsMetadata();
+      const createTaskMeta = metadata.find((t) => t.name === 'createTask');
+      expect(createTaskMeta?.policy).toBe('REQUIRE_APPROVAL');
+      expect(createTaskMeta?.riskLevel).toBe('INTERNAL_WRITE');
     });
 
     it('rejects unknown tools in executeRegisteredTool', async () => {
@@ -118,6 +127,8 @@ describe('Phase 2 AI & Automation Module', () => {
           attempts: 1,
           tokensUsed: 120,
           checkpointThreadId: input.threadId,
+          interrupted: true,
+          pendingApprovalIds: ['approval-1'],
           steps: [],
         };
       };
@@ -209,6 +220,29 @@ describe('Phase 2 AI & Automation Module', () => {
         'user-1'
       );
       expect(mockRepo.syncExecutionStatusFromApprovals).toHaveBeenCalledWith('exec-1');
+    });
+
+    it('rejects expired approvals with 410 and marks them EXPIRED', async () => {
+      const mockRepo = {
+        findApprovalByIdAndUserId: vi.fn().mockResolvedValue({
+          id: 'app-expired',
+          executionId: 'exec-1',
+          toolName: 'createTask',
+          toolArgs: { title: 'Expired' },
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() - 60000),
+        }),
+        markApprovalExpired: vi.fn().mockResolvedValue({ id: 'app-expired', status: 'EXPIRED' }),
+        syncExecutionStatusFromApprovals: vi.fn().mockResolvedValue(undefined),
+      } as unknown as AutomationRepository;
+
+      const service = new AutomationService(mockRepo);
+      await expect(service.approveToolCall('app-expired', 'user-1')).rejects.toThrow(
+        'Approval request has expired'
+      );
+      expect(mockRepo.markApprovalExpired).toHaveBeenCalledWith('app-expired');
+      expect(mockRepo.syncExecutionStatusFromApprovals).toHaveBeenCalledWith('exec-1');
+      expect(aiApprovalStatusSchema.parse('EXPIRED')).toBe('EXPIRED');
     });
 
     it('rejects already processed approvals with 409', async () => {

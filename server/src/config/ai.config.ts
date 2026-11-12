@@ -8,6 +8,7 @@ export const aiConfig = {
   langgraphSchema: 'langgraph',
   defaultTokenBudget: 60000,
   defaultMaxIterations: 8,
+  defaultApprovalTtlMs: 24 * 60 * 60 * 1000,
   embeddingDimensions: 768,
   langsmith: {
     enabled: isLangSmithEnabled,

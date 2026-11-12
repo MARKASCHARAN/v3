@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentRole } from '../../ai/runtime/state';
 import {
   aiApprovalStatusSchema,
   aiExecutionStatusSchema,
@@ -17,4 +18,17 @@ export type ExecutionsQueryInput = z.infer<typeof executionsQuerySchema>;
 export type ApprovalsQueryInput = z.infer<typeof approvalsQuerySchema>;
 export type ApprovalDecisionInput = z.infer<typeof approvalDecisionSchema>;
 
-export type ToolExecutor = (toolName: string, rawArgs: unknown, userId: string) => Promise<unknown>;
+export interface ToolExecutorContext {
+  executionId?: string;
+  agentRole?: AgentRole;
+  idempotencyKey?: string;
+  allowAutoApproveWrites?: boolean;
+  bypassApprovalCheck?: boolean;
+}
+
+export type ToolExecutor = (
+  toolName: string,
+  rawArgs: unknown,
+  userId: string,
+  contextOverrides?: ToolExecutorContext
+) => Promise<unknown>;

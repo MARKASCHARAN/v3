@@ -1,15 +1,17 @@
 import { BaseMessage, isHumanMessage } from '@langchain/core/messages';
 import { StructuredToolInterface } from '@langchain/core/tools';
-import { BaseCheckpointSaver } from '@langchain/langgraph';
+import { BaseCheckpointSaver, Command, INTERRUPT } from '@langchain/langgraph';
 import { aiConfig } from '../../config/ai.config';
 import { buildCheckpointConfig, ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import {
+  FoundationGraphConfig,
+  GraphApprovalPolicy,
   RunnableChatModel,
   createFoundationAgentGraph,
   extractStepTracesFromMessages,
 } from '../runtime/graph-factory';
 import { AgentRole, ExecutionMode } from '../runtime/state';
-import { ExecutionStepTrace } from '../tools/tool.types';
+import { ApprovalDecisionPayload, ExecutionStepTrace } from '../tools/tool.types';
 import { RetryOptions } from './retry.workflow';
 
 export interface MultiStepWorkflowInput {
@@ -30,6 +32,20 @@ export interface MultiStepWorkflowInput {
   runId?: string;
   checkpointer?: BaseCheckpointSaver;
   retryOptions?: RetryOptions;
+  approvalPolicy?: GraphApprovalPolicy;
+}
+
+export interface ResumeWorkflowInput {
+  model: RunnableChatModel;
+  system: string;
+  tools: StructuredToolInterface[];
+  threadId: string;
+  checkpointNamespace?: string;
+  runId?: string;
+  checkpointer?: BaseCheckpointSaver;
+  retryOptions?: RetryOptions;
+  approvalPolicy?: GraphApprovalPolicy;
+  decisions: Record<string, ApprovalDecisionPayload>;
 }
 
 export interface MultiStepWorkflowOutput {
@@ -37,6 +53,8 @@ export interface MultiStepWorkflowOutput {
   attempts: number;
   tokensUsed: number;
   checkpointThreadId: string;
+  interrupted: boolean;
+  pendingApprovalIds: string[];
   steps: ExecutionStepTrace[];
 }
 
@@ -50,16 +68,55 @@ const findTurnStartIndex = (messages: BaseMessage[]): number => {
   return 0;
 };
 
+const extractInterruptMetadata = (
+  rawResult: unknown
+): {
+  interrupted: boolean;
+  approvalIds: string[];
+} => {
+  const resultRecord = rawResult as Record<symbol | string, unknown>;
+  const interrupts = resultRecord[INTERRUPT] as
+    Array<{ value?: { approvals?: Array<{ approvalId?: string }> } }> | undefined;
+
+  if (!Array.isArray(interrupts) || interrupts.length === 0) {
+    return { interrupted: false, approvalIds: [] };
+  }
+
+  const approvalIds: string[] = [];
+  for (const item of interrupts) {
+    const approvals = item.value?.approvals;
+    if (Array.isArray(approvals)) {
+      for (const entry of approvals) {
+        if (typeof entry.approvalId === 'string') {
+          approvalIds.push(entry.approvalId);
+        }
+      }
+    }
+  }
+
+  return { interrupted: true, approvalIds };
+};
+
+const compileWorkflowGraph = async (
+  config: Omit<FoundationGraphConfig, 'checkpointer'> & { checkpointer?: BaseCheckpointSaver }
+) => {
+  const checkpointer = config.checkpointer ?? (await ensurePostgresCheckpointer());
+  return createFoundationAgentGraph({
+    ...config,
+    checkpointer,
+  });
+};
+
 export const runMultiStepToolWorkflow = async (
   input: MultiStepWorkflowInput
 ): Promise<MultiStepWorkflowOutput> => {
-  const checkpointer = input.checkpointer ?? (await ensurePostgresCheckpointer());
-  const { graph, getRetryAttempts } = createFoundationAgentGraph({
+  const { graph, getRetryAttempts } = await compileWorkflowGraph({
     model: input.model,
     systemPrompt: input.system,
     tools: input.tools,
-    checkpointer,
+    checkpointer: input.checkpointer,
     retryOptions: input.retryOptions,
+    approvalPolicy: input.approvalPolicy,
   });
 
   const config = buildCheckpointConfig(input.threadId, input.checkpointNamespace, input.runId);
@@ -85,12 +142,78 @@ export const runMultiStepToolWorkflow = async (
 
   const turnStart = findTurnStartIndex(result.messages);
   const steps = extractStepTracesFromMessages(result.messages, turnStart);
+  const interruptState = extractInterruptMetadata(result);
+
+  const text = interruptState.interrupted
+    ? result.finalResponse ||
+      `${interruptState.approvalIds.length || 1} action(s) queued for your approval.`
+    : result.finalResponse;
 
   return {
-    text: result.finalResponse,
+    text,
     attempts: getRetryAttempts(),
     tokensUsed: result.tokensUsed,
     checkpointThreadId: input.threadId,
+    interrupted: interruptState.interrupted,
+    pendingApprovalIds: interruptState.approvalIds,
+    steps,
+  };
+};
+
+export const hasPendingInterruptForThread = async (input: {
+  model: RunnableChatModel;
+  system: string;
+  tools: StructuredToolInterface[];
+  threadId: string;
+  checkpointNamespace?: string;
+  checkpointer?: BaseCheckpointSaver;
+  approvalPolicy?: GraphApprovalPolicy;
+}): Promise<boolean> => {
+  const { graph } = await compileWorkflowGraph({
+    model: input.model,
+    systemPrompt: input.system,
+    tools: input.tools,
+    checkpointer: input.checkpointer,
+    approvalPolicy: input.approvalPolicy,
+  });
+
+  const snapshot = await graph.getState(
+    buildCheckpointConfig(input.threadId, input.checkpointNamespace)
+  );
+  return snapshot.tasks.some(
+    (task) => Array.isArray(task.interrupts) && task.interrupts.length > 0
+  );
+};
+
+export const resumeInterruptedToolWorkflow = async (
+  input: ResumeWorkflowInput
+): Promise<MultiStepWorkflowOutput> => {
+  const { graph, getRetryAttempts } = await compileWorkflowGraph({
+    model: input.model,
+    systemPrompt: input.system,
+    tools: input.tools,
+    checkpointer: input.checkpointer,
+    retryOptions: input.retryOptions,
+    approvalPolicy: input.approvalPolicy,
+  });
+
+  const config = buildCheckpointConfig(input.threadId, input.checkpointNamespace, input.runId);
+  const result = await graph.invoke(new Command({ resume: input.decisions }), config);
+
+  const turnStart = findTurnStartIndex(result.messages);
+  const steps = extractStepTracesFromMessages(result.messages, turnStart);
+  const interruptState = extractInterruptMetadata(result);
+
+  return {
+    text: interruptState.interrupted
+      ? result.finalResponse ||
+        `${interruptState.approvalIds.length || 1} action(s) queued for your approval.`
+      : result.finalResponse,
+    attempts: getRetryAttempts(),
+    tokensUsed: result.tokensUsed,
+    checkpointThreadId: input.threadId,
+    interrupted: interruptState.interrupted,
+    pendingApprovalIds: interruptState.approvalIds,
     steps,
   };
 };

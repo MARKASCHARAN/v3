@@ -121,15 +121,15 @@ A functioning personal management system where users can create goals, convert t
 - [x] Integrate primary AI model (`@langchain/google-genai`, migrated from initial `@ai-sdk/google` in M2.1)
 - [x] Build provider abstraction (`server/src/ai/providers/model-router.ts` & `embeddings.ts`)
 - [x] Implement LangGraph `PostgresSaver` runtime foundation (`server/src/ai/runtime/{state,checkpoints,graph-factory}.ts`, `AssistantOrchestrator` in M2.1)
-- [x] Implement agent/tool execution framework (`server/src/ai/tools/v3.tools.ts`, upgrading to 5-level `risk-policy.ts` in M2.2)
+- [x] Implement agent/tool execution framework (`server/src/ai/tools/registry.ts`, `server/src/ai/tools/internal/`, and 5-level `risk-policy.ts` + `permission-guard.ts` in M2.2)
 - [x] Implement prompt management (`server/src/ai/prompts/prompt.registry.ts`, `assistant.prompt.ts`, `planning.prompt.ts`)
 - [x] Implement conversation context (preferences, memories, workload snapshot, and `ConversationMessage` history)
-- [x] Implement structured tool calling (`V3_TOOL_REGISTRY` with Zod `inputSchema` / `toolSchema` validation)
-- [x] Implement multi-step workflows (`server/src/ai/workflows/execution.workflow.ts` running checkpointed LangGraph `StateGraph`)
+- [x] Implement structured tool calling (`V3_TOOL_REGISTRY` `V3ToolContract` entries with Zod input/output schemas and Gemini-safe `toolSchema` wrappers)
+- [x] Implement multi-step workflows (`server/src/ai/workflows/execution.workflow.ts` running checkpointed LangGraph `StateGraph` + `interrupt()`/`Command({ resume })`)
 - [x] Implement execution history (`AiExecution` persistence with `threadId`, `agentRole`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`)
-- [x] Implement human approval and permission checks (`REQUIRE_APPROVAL` policy, `AiToolApproval` queue, `/api/v1/automation/approvals/:id/approve|reject`)
+- [x] Implement human approval and permission checks (5-level risk policy, `AiToolApproval` with `idempotencyKey`/`expiresAt`, `/api/v1/automation/approvals/:id/approve|reject`)
 - [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff)
-- [ ] Complete Milestone `2.2`–`2.10` hybrid architecture rollout (`risk-policy` & LangGraph `interrupt()` resume, specialist agents, Deep Agents selective harness, hybrid SQL/FTS/vector retrieval, Trigger.dev workers, MCP, and integrations)
+- [ ] Complete Milestone `2.3`–`2.10` hybrid architecture rollout (8-step `orchestrator.ts`, specialist agents, Deep Agents selective harness, hybrid SQL/FTS/vector retrieval, Trigger.dev workers, MCP, and integrations)
 
 ### B. Original Features Continued
 
@@ -281,5 +281,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.1` (Agent Runtime Foundation) is complete. Proceed to **Milestone `2.2` (Tool & Permission Framework)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.2` (Tool & Permission Framework) is complete. Proceed to **Milestone `2.3` (Main Orchestrator)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

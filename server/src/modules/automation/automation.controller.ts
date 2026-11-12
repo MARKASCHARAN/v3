@@ -61,7 +61,8 @@ export class AutomationController {
   approve = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = this.getUserId(req);
     const id = this.getIdParam(req);
-    const approval = await this.automationService.approveToolCall(id, userId);
+    const body = (req.body || {}) as ApprovalDecisionInput;
+    const approval = await this.automationService.approveToolCall(id, userId, body.reason);
     res.status(200).json({ success: true, data: approval });
   };
 

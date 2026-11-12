@@ -31,6 +31,24 @@ export class AutomationRepository {
     });
   }
 
+  async findExecutionForResume(executionId: string, userId: string) {
+    return prisma.aiExecution.findFirst({
+      where: { id: executionId, userId },
+      select: {
+        id: true,
+        userId: true,
+        sessionId: true,
+        threadId: true,
+        agentRole: true,
+        provider: true,
+        model: true,
+        approvals: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
   async findApprovals(userId: string, filters: Partial<ApprovalsQueryInput> = {}) {
     return prisma.aiToolApproval.findMany({
       where: {
@@ -49,11 +67,12 @@ export class AutomationRepository {
     });
   }
 
-  async markApprovalApproved(id: string) {
+  async markApprovalApproved(id: string, decisionReason?: string) {
     return prisma.aiToolApproval.update({
       where: { id },
       data: {
         status: 'APPROVED',
+        decisionReason,
         decidedAt: new Date(),
       },
     });
@@ -86,7 +105,20 @@ export class AutomationRepository {
       where: { id },
       data: {
         status: 'REJECTED',
+        decisionReason: reason,
         errorMessage: reason,
+        decidedAt: new Date(),
+      },
+    });
+  }
+
+  async markApprovalExpired(id: string) {
+    return prisma.aiToolApproval.update({
+      where: { id },
+      data: {
+        status: 'EXPIRED',
+        decisionReason: 'Approval request expired',
+        errorMessage: 'Approval request expired',
         decidedAt: new Date(),
       },
     });
@@ -105,9 +137,11 @@ export class AutomationRepository {
 
     const hasExecuted = approvals.some((a) => a.status === 'EXECUTED');
     const hasFailed = approvals.some((a) => a.status === 'FAILED');
-    const allRejected = approvals.length > 0 && approvals.every((a) => a.status === 'REJECTED');
+    const allRejectedOrExpired =
+      approvals.length > 0 &&
+      approvals.every((a) => a.status === 'REJECTED' || a.status === 'EXPIRED');
 
-    const nextStatus: AiExecutionStatus = allRejected
+    const nextStatus: AiExecutionStatus = allRejectedOrExpired
       ? 'REJECTED'
       : hasFailed && !hasExecuted
         ? 'FAILED'

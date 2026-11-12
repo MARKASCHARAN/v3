@@ -14,6 +14,7 @@ export const aiApprovalStatusSchema = z.enum([
   'REJECTED',
   'EXECUTED',
   'FAILED',
+  'EXPIRED',
 ]);
 
 export const runAssistantSchema = z.object({

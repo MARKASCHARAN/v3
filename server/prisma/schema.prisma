@@ -256,21 +256,28 @@ model AiExecution {
 }
 
 model AiToolApproval {
-  id           String      @id @default(uuid())
-  executionId  String
-  userId       String
-  toolName     String
-  toolArgs     Json
-  status       String      @default("PENDING")
-  resultData   Json?
-  errorMessage String?
-  decidedAt    DateTime?
-  executedAt   DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  execution    AiExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String      @id @default(uuid())
+  executionId    String
+  userId         String
+  toolName       String
+  toolArgs       Json
+  riskLevel      String      @default("INTERNAL_WRITE")
+  agentRole      String      @default("MAIN_ORCHESTRATOR")
+  idempotencyKey String?     @unique
+  status         String      @default("PENDING")
+  decisionReason String?
+  resultData     Json?
+  errorMessage   String?
+  expiresAt      DateTime?
+  decidedAt      DateTime?
+  executedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  execution      AiExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([executionId, status])
+  @@index([expiresAt])
   @@map("ai_tool_approvals")
 }
 

@@ -6,10 +6,21 @@ import { aiConfig, configureLangSmithRuntime } from '../../config/ai.config';
 import { prisma } from '../../database/prisma';
 import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
 import { AiProviderName, resolveChatModel } from '../providers/model-router';
+import { ensurePostgresCheckpointer } from '../runtime/checkpoints';
+import { GraphApprovalPolicy } from '../runtime/graph-factory';
 import { AgentRole } from '../runtime/state';
-import { ExecutionStepTrace, PendingToolApprovalRequest } from '../tools/tool.types';
-import { buildLangChainTools } from '../tools/v3.tools';
-import { MultiStepWorkflowOutput, runMultiStepToolWorkflow } from '../workflows/execution.workflow';
+import { buildLangChainTools } from '../tools/registry';
+import {
+  ApprovalDecisionPayload,
+  ExecutionStepTrace,
+  PendingToolApprovalRequest,
+} from '../tools/tool.types';
+import {
+  MultiStepWorkflowOutput,
+  hasPendingInterruptForThread,
+  resumeInterruptedToolWorkflow,
+  runMultiStepToolWorkflow,
+} from '../workflows/execution.workflow';
 
 export interface RunAssistantWorkflowParams {
   userId: string;
@@ -36,6 +47,7 @@ export type WorkflowExecutor = (input: {
   agentRole: AgentRole;
   tokenBudget: number;
   langsmithTraceId?: string;
+  approvalPolicy: GraphApprovalPolicy;
 }) => Promise<
   MultiStepWorkflowOutput & { provider: string; model: string; langsmithTraceId?: string }
 >;
@@ -61,6 +73,7 @@ const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
     agentRole: input.agentRole,
     tokenBudget: input.tokenBudget,
     runId: input.langsmithTraceId,
+    approvalPolicy: input.approvalPolicy,
   });
 
   return {
@@ -105,6 +118,10 @@ export interface OrchestratorPersistence {
     userId: string;
     toolName: string;
     toolArgs: Record<string, unknown>;
+    riskLevel?: string;
+    agentRole?: string;
+    idempotencyKey?: string;
+    expiresAt?: Date;
   }): Promise<{ id: string }>;
   completeExecution(
     executionId: string,
@@ -195,13 +212,27 @@ const prismaPersistence: OrchestratorPersistence = {
     });
   },
 
-  createPendingApproval(data) {
+  async createPendingApproval(data) {
+    if (data.idempotencyKey) {
+      const existing = await prisma.aiToolApproval.findUnique({
+        where: { idempotencyKey: data.idempotencyKey },
+        select: { id: true },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
     return prisma.aiToolApproval.create({
       data: {
         executionId: data.executionId,
         userId: data.userId,
         toolName: data.toolName,
         toolArgs: data.toolArgs as Prisma.InputJsonValue,
+        riskLevel: data.riskLevel ?? 'INTERNAL_WRITE',
+        agentRole: data.agentRole ?? 'MAIN_ORCHESTRATOR',
+        idempotencyKey: data.idempotencyKey,
+        expiresAt: data.expiresAt,
         status: 'PENDING',
       },
       select: { id: true },
@@ -283,17 +314,28 @@ export class AssistantOrchestrator {
 
     let pendingApprovalsCount = 0;
 
+    const createApprovalRecord = async (request: PendingToolApprovalRequest) => {
+      const approval = await this.persistence.createPendingApproval({
+        executionId: execution.id,
+        userId: params.userId,
+        toolName: request.toolName,
+        toolArgs: request.toolArgs,
+        riskLevel: request.riskLevel,
+        agentRole: request.agentRole,
+        idempotencyKey: request.idempotencyKey,
+        expiresAt: request.expiresAt ?? new Date(Date.now() + aiConfig.defaultApprovalTtlMs),
+      });
+      pendingApprovalsCount += 1;
+      return approval;
+    };
+
     const tools = buildLangChainTools({
       userId: params.userId,
+      executionId: execution.id,
+      agentRole,
       allowAutoApproveWrites: params.allowAutoApproveWrites,
-      onPendingApproval: async (request: PendingToolApprovalRequest) => {
-        const approval = await this.persistence.createPendingApproval({
-          executionId: execution.id,
-          userId: params.userId,
-          toolName: request.toolName,
-          toolArgs: request.toolArgs,
-        });
-        pendingApprovalsCount += 1;
+      onPendingApproval: async (request) => {
+        const approval = await createApprovalRecord(request);
         return approval.id;
       },
     });
@@ -314,13 +356,21 @@ export class AssistantOrchestrator {
         agentRole,
         tokenBudget,
         langsmithTraceId,
+        approvalPolicy: {
+          agentRole,
+          userId: params.userId,
+          executionId: execution.id,
+          allowAutoApproveWrites: params.allowAutoApproveWrites,
+          createPendingApproval: createApprovalRecord,
+        },
       });
 
-      const status = pendingApprovalsCount > 0 ? 'AWAITING_APPROVAL' : 'COMPLETED';
+      const isAwaitingApproval = output.interrupted || pendingApprovalsCount > 0;
+      const status = isAwaitingApproval ? 'AWAITING_APPROVAL' : 'COMPLETED';
       const responseText =
         output.text ||
-        (pendingApprovalsCount > 0
-          ? `${pendingApprovalsCount} action(s) queued for your approval.`
+        (isAwaitingApproval
+          ? `${pendingApprovalsCount || output.pendingApprovalIds.length || 1} action(s) queued for your approval.`
           : 'Completed.');
 
       await this.persistence.saveConversationMessage({
@@ -348,5 +398,103 @@ export class AssistantOrchestrator {
       });
       throw error;
     }
+  }
+
+  async resumeExecution(params: {
+    executionId: string;
+    userId: string;
+    sessionId: string;
+    threadId: string;
+    agentRole: AgentRole;
+    provider?: AiProviderName;
+    modelId?: string;
+    decisions: Record<string, ApprovalDecisionPayload>;
+  }) {
+    const checkpointer = await ensurePostgresCheckpointer();
+    const descriptor = resolveChatModel({
+      provider: params.provider,
+      modelId: params.modelId,
+      tier: 'ORCHESTRATION',
+    });
+
+    const context = await this.persistence.loadContext(params.userId, params.sessionId);
+    const system = buildAssistantSystemContext({
+      preferences: context.preferences,
+      memories: context.memories,
+      overdueTasksCount: context.overdueTasksCount,
+      pendingRemindersCount: context.pendingRemindersCount,
+    });
+
+    const createApprovalRecord = async (request: PendingToolApprovalRequest) =>
+      this.persistence.createPendingApproval({
+        executionId: params.executionId,
+        userId: params.userId,
+        toolName: request.toolName,
+        toolArgs: request.toolArgs,
+        riskLevel: request.riskLevel,
+        agentRole: request.agentRole,
+        idempotencyKey: request.idempotencyKey,
+        expiresAt: request.expiresAt ?? new Date(Date.now() + aiConfig.defaultApprovalTtlMs),
+      });
+
+    const tools = buildLangChainTools({
+      userId: params.userId,
+      executionId: params.executionId,
+      agentRole: params.agentRole,
+      allowAutoApproveWrites: false,
+      onPendingApproval: async (request) => {
+        const created = await createApprovalRecord(request);
+        return created.id;
+      },
+    });
+
+    const approvalPolicy: GraphApprovalPolicy = {
+      agentRole: params.agentRole,
+      userId: params.userId,
+      executionId: params.executionId,
+      allowAutoApproveWrites: false,
+      createPendingApproval: createApprovalRecord,
+    };
+
+    const canResume = await hasPendingInterruptForThread({
+      model: descriptor.model,
+      system,
+      tools,
+      threadId: params.threadId,
+      checkpointer,
+      approvalPolicy,
+    });
+
+    if (!canResume) {
+      return null;
+    }
+
+    const output = await resumeInterruptedToolWorkflow({
+      model: descriptor.model,
+      system,
+      tools,
+      threadId: params.threadId,
+      checkpointer,
+      decisions: params.decisions,
+      approvalPolicy,
+    });
+
+    const status = output.interrupted ? 'AWAITING_APPROVAL' : 'COMPLETED';
+    await this.persistence.saveConversationMessage({
+      userId: params.userId,
+      sessionId: params.sessionId,
+      role: 'ASSISTANT',
+      content: output.text,
+    });
+
+    return this.persistence.completeExecution(params.executionId, {
+      status,
+      provider: descriptor.provider,
+      model: descriptor.modelId,
+      responseText: output.text,
+      attempts: output.attempts,
+      tokensUsed: output.tokensUsed,
+      stepsData: output.steps,
+    });
   }
 }

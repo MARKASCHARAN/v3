@@ -6,8 +6,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { configureLangSmithRuntime } from '../../config/ai.config';
 import { MODEL_BY_TIER, extractTextContent } from '../providers/model-router';
-import { buildLangChainTools } from '../tools/v3.tools';
-import { runMultiStepToolWorkflow } from '../workflows/execution.workflow';
+import { buildLangChainTools } from '../tools/registry';
+import {
+  resumeInterruptedToolWorkflow,
+  runMultiStepToolWorkflow,
+} from '../workflows/execution.workflow';
 import { buildCheckpointConfig } from './checkpoints';
 import { RunnableChatModel } from './graph-factory';
 
@@ -73,6 +76,7 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
       checkpointer,
     });
 
+    expect(output.interrupted).toBe(false);
     expect(output.text).toBe('Echoed: hello');
     expect(output.tokensUsed).toBe(145);
     expect(output.checkpointThreadId).toBe('thread-runtime-1');
@@ -83,6 +87,100 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
     const savedCheckpoint = await checkpointer.getTuple(buildCheckpointConfig('thread-runtime-1'));
     expect(savedCheckpoint).toBeDefined();
     expect(savedCheckpoint?.checkpoint.channel_values.tokensUsed).toBe(145);
+  });
+
+  it('pauses at approval_gate via LangGraph interrupt() and resumes via Command({ resume })', async () => {
+    const checkpointer = new MemorySaver();
+    const createPendingApproval = vi.fn().mockResolvedValue({ id: 'app-int-1' });
+    const invokeMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new AIMessage({
+          content: '',
+          tool_calls: [
+            {
+              id: 'tc-create-task',
+              name: 'createTask',
+              args: { title: 'Write M2.2 tests', priority: 'HIGH' },
+            },
+          ],
+          usage_metadata: { input_tokens: 50, output_tokens: 20, total_tokens: 70 },
+        })
+      )
+      .mockResolvedValueOnce(
+        new AIMessage({
+          content: 'Created high-priority task "Write M2.2 tests".',
+          usage_metadata: { input_tokens: 90, output_tokens: 25, total_tokens: 115 },
+        })
+      );
+
+    const mockModel: RunnableChatModel = {
+      bindTools: () => ({ invoke: invokeMock }),
+      invoke: invokeMock,
+    };
+
+    const tools = buildLangChainTools({
+      userId: 'user-1',
+      executionId: 'exec-int-1',
+      agentRole: 'MAIN_ORCHESTRATOR',
+      allowAutoApproveWrites: false,
+      onPendingApproval: async () => 'unused',
+    });
+
+    const approvalPolicy = {
+      agentRole: 'MAIN_ORCHESTRATOR' as const,
+      userId: 'user-1',
+      executionId: 'exec-int-1',
+      allowAutoApproveWrites: false,
+      createPendingApproval,
+    };
+
+    const paused = await runMultiStepToolWorkflow({
+      model: mockModel,
+      system: 'System context',
+      messages: [new HumanMessage('Create a high priority task to write M2.2 tests')],
+      tools,
+      maxSteps: 5,
+      threadId: 'thread-int-1',
+      executionId: 'exec-int-1',
+      userId: 'user-1',
+      sessionId: 'default',
+      objective: 'Create task',
+      checkpointer,
+      approvalPolicy,
+    });
+
+    expect(paused.interrupted).toBe(true);
+    expect(paused.pendingApprovalIds).toEqual(['app-int-1']);
+    expect(createPendingApproval).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: 'createTask',
+        riskLevel: 'INTERNAL_WRITE',
+        idempotencyKey: 'exec-int-1:tc-create-task',
+      })
+    );
+
+    const resumed = await resumeInterruptedToolWorkflow({
+      model: mockModel,
+      system: 'System context',
+      tools,
+      threadId: 'thread-int-1',
+      checkpointer,
+      approvalPolicy,
+      decisions: {
+        'app-int-1': {
+          approvalId: 'app-int-1',
+          toolName: 'createTask',
+          decision: 'EXECUTED',
+          result: { id: 'task-created-1', title: 'Write M2.2 tests' },
+        },
+      },
+    });
+
+    expect(resumed.interrupted).toBe(false);
+    expect(resumed.text).toBe('Created high-priority task "Write M2.2 tests".');
+    expect(resumed.tokensUsed).toBe(185);
+    expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
   it('halts cleanly on maxIterations limit via budget guard', async () => {
