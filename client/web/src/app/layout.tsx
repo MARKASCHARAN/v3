@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google';
+import { Anton, Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+
+const anton = Anton({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-anton',
+});
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${anton.variable} ${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#faf9f6] font-sans text-[#1a1c1a] selection:bg-[#ff6b35]/20 selection:text-[#5f1900]">
         {children}

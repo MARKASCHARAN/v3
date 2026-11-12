@@ -1,182 +1,356 @@
 # V3
 
-V3 is a modular personal management and autonomous AI assistant platform built with TypeScript across a monolithic Express backend, a Next.js web dashboard, and an Expo mobile client.
+### Your personal AI system for thinking, planning, and getting things done.
 
-> **Repository Status:** Phase 1 Foundation and Phase 2 Autonomous Hybrid Intelligence (`Milestones 2.1–2.10`) are implemented on the backend (`server/`) alongside the Phase 1 Next.js web dashboard (`client/web/`) and CI/CD + cloud deployment manifests. Mobile (`client/mobile/`) and Phase 3 analytics modules remain scheduled for Phase 3.
+V3 is an autonomous personal assistant designed to help you manage your life and execute your goals.
 
-## Repository Strategy (Option B)
+It brings together everything that usually lives in separate places — goals, tasks, schedules, reminders, conversations, knowledge, and digital tools — into one connected system.
 
-V3 uses **one Git repository** with **independent `npm` packages** per application:
+But V3 isn't just another productivity app.
 
-- **No** pnpm, Nx, Turborepo, npm workspaces, or microservices.
-- **Root** contains only repository-level documentation and Git configuration (no root `package.json`).
-- **Backend** is a feature-based modular monolith (`server/`).
-- **Clients** are independent applications (`client/web/` and `client/mobile/`).
+It doesn't simply store your tasks or wait for you to ask questions. It understands what you're trying to achieve, helps you figure out what needs to happen next, takes action on your behalf, tracks progress, and adapts when things change.
 
-## Scope & Feature Overview
+**The idea is simple: spend less time managing your life and more time actually living and building it.**
 
-V3's initial product scope covers the **12 original feature groups** delivered across three dependency-ordered engineering phases:
+---
 
-1. **01. Goal management** — Goal hierarchy, yearly goals, milestones, and progress tracking
-2. **02. AI planning** — Goal decomposition, plans, milestones, and task suggestions
-3. **03. Scheduling** — Calendar model, time blocks, and scheduling logic
-4. **04. Task management** — Tasks, subtasks, priorities, deadlines, and statuses
-5. **05. Accountability** — Missed-task detection, reminders, progress tracking, and adaptive interventions
-6. **06. Notifications** — Telegram, email (Resend), Discord, and WhatsApp Cloud API integrations
-7. **07. Voice and calling** — Speech input/output, voice commands, telephony, and Bhashini ASR/TTS/translation
-8. **08. Memory** — User preferences, project context, conversation history, and pgvector semantic retrieval
-9. **09. Research** — Web research, summarization, knowledge retrieval, and continuous monitoring
-10. **10. Developer assistant** — GitHub integration, repository monitoring, issues, and pull requests
-11. **11. Automation / Autonomous execution** — Multi-step workflows, autonomous tool execution, and recovery
-12. **12. Analytics** — Productivity reports, goal analytics, and personal insights
+## The Problem
 
-Additional ideas numbered 13+ (daily briefing, opportunity radar, career agent, travel assistant, etc.) remain outside this initial three-phase scope for later expansion.
+We have more productivity tools than ever, yet managing our work and personal lives still requires an enormous amount of manual effort.
 
-## Technology Stack
+Our goals are in one application. Tasks are somewhere else. Calendars, notes, conversations, reminders, and important information are scattered across different platforms.
 
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| Main language | TypeScript | Backend, website, and mobile |
-| Runtime | Node.js 24 LTS | Backend runtime |
-| Backend framework | Express 5 | REST API |
-| Backend architecture | Modular monolith | Feature-based modules |
-| Web framework | Next.js App Router | Website and dashboard |
-| Web UI | React + Tailwind CSS | Interface and styling |
-| Mobile framework | React Native + Expo | iOS and Android app |
-| Package manager | npm | Independent dependency management per app |
-| Database | PostgreSQL | Application data |
-| Database hosting | Supabase | Managed PostgreSQL |
-| ORM | Prisma | Database queries and migrations |
-| Validation | Zod | API request and data validation |
-| API documentation | OpenAPI / Swagger | REST endpoint documentation |
-| Authentication | Supabase Auth | User authentication |
-| AI integration | LangChain.js + `@langchain/google-genai` | Model routing, prompts, embeddings, and structured tools |
-| Agent orchestration | LangGraph.js + Deep Agents (selective) + LangSmith | Stateful agent runtime, checkpoints, and tracing |
-| External tool protocol | Model Context Protocol (MCP) | Standardized external tool connectivity |
-| Memory search | PostgreSQL + pgvector | Hybrid SQL, keyword, and semantic retrieval |
-| Background jobs | Trigger.dev | Scheduled, event-driven, and long-running runs |
-| File storage | Supabase Storage | Documents and attachments |
-| Email | Resend | Email notifications |
-| Voice and Indian languages | Bhashini | ASR, TTS, translation, and related services |
-| Testing | Vitest + Supertest | Unit and API testing |
-| Code quality | ESLint + Prettier | Linting and formatting |
-| Version control | Git + GitHub | Source control |
-| CI | GitHub Actions | Automated tests and builds |
+And even when everything is organized, the responsibility of making progress still falls entirely on us.
 
-## Repository Structure
+We constantly have to:
 
-```text
-v3/
-├── server/
-│   ├── src/
-│   │   ├── config/
-│   │   │   ├── env.ts
-│   │   │   ├── app.config.ts
-│   │   │   └── database.ts (planned)
-│   │   ├── middleware/
-│   │   │   ├── auth.middleware.ts
-│   │   │   ├── error.middleware.ts
-│   │   │   └── validation.middleware.ts (planned)
-│   │   ├── modules/
-│   │   │   ├── auth/
-│   │   │   ├── goals/
-│   │   │   ├── planning/
-│   │   │   ├── scheduling/
-│   │   │   ├── tasks/
-│   │   │   ├── accountability/
-│   │   │   ├── notifications/
-│   │   │   ├── voice/
-│   │   │   ├── memory/
-│   │   │   ├── research/
-│   │   │   ├── developer/
-│   │   │   ├── automation/
-│   │   │   └── analytics/
-│   │   ├── ai/
-│   │   │   ├── agents/
-│   │   │   ├── providers/
-│   │   │   ├── tools/
-│   │   │   ├── prompts/
-│   │   │   └── workflows/
-│   │   ├── routes/
-│   │   │   └── v1.router.ts
-│   │   ├── database/
-│   │   ├── utils/
-│   │   ├── app.ts
-│   │   └── server.ts
-│   ├── prisma/
-│   │   ├── schema.prisma (planned)
-│   │   └── migrations/ (planned)
-│   ├── tests/
-│   ├── .env.example
-│   ├── package.json
-│   └── tsconfig.json
-├── client/
-│   ├── web/
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── components/
-│   │   │   ├── features/
-│   │   │   ├── hooks/
-│   │   │   ├── lib/
-│   │   │   └── types/
-│   │   ├── public/
-│   │   ├── package.json
-│   │   └── tsconfig.json
-│   └── mobile/
-│       ├── src/
-│       │   ├── app/
-│       │   ├── components/
-│       │   ├── constants/
-│       │   └── hooks/
-│       ├── assets/
-│       ├── package.json
-│       └── tsconfig.json
-├── docs/
-│   ├── architecture.md
-│   ├── api.md
-│   ├── database.md
-│   └── development-roadmap.md
-├── .gitignore
-└── README.md
-```
+- Figure out what to work on next.
+- Break large goals into manageable actions.
+- Decide what deserves priority.
+- Find time for important work.
+- Remember commitments and deadlines.
+- Follow up on unfinished tasks.
+- Search through conversations and information to recover context.
+- Move between applications to complete simple workflows.
+- Reorganize everything whenever plans change.
 
-## Development Ports & Local Setup
+Most productivity applications help us **organize the work**.
 
-| Application | Local Address |
-| --- | --- |
-| Express backend | `http://localhost:5000` |
-| Next.js website | `http://localhost:3000` |
-| PostgreSQL | Managed Supabase database |
-| Mobile app | Expo development environment |
+AI assistants help us **think about the work**.
 
-### Environment Variables
+But there's still a gap between knowing what needs to be done and actually getting it done.
 
-Copy `server/.env.example` to `server/.env` and populate required secrets before starting the backend:
+**V3 is being built to close that gap.**
 
-- Required by `server/src/config/env.ts`: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- Optional / defaults provided: `NODE_ENV` (`development`), `PORT` (`5000`), `WEB_ORIGIN` (`http://localhost:3000`), `DIRECT_URL`, `GEMINI_API_KEY`, `BHASHINI_UDYAT_KEY`, `BHASHINI_INFERENCE_KEY`, `RESEND_API_KEY`
+---
 
-Never commit `.env` files or API credentials. Service-role keys and AI provider keys must remain strictly server-side.
+## The Vision
 
-### Application Commands
+Imagine having one intelligent system that understands your goals, knows what you're working on, remembers important context, and can coordinate your digital life.
 
-Install dependencies and run scripts independently inside each app directory:
+You tell it:
 
-- **Backend (`server/`)**: `npm install`, `npm run dev`, `npm run build`, `npm start`, `npm test`, `npm run db:generate`, `npm run db:migrate`, `npm run db:verify-recovery`, `npm run db:studio`
-- **Web (`client/web/`)**: `npm install`, `npm run dev`, `npm run build`, `npm start`, `npm run lint`
-- **Mobile (`client/mobile/`)**: `npm install`, `npm start`, `npm run android`, `npm run ios`, `npm run web`, `npm run lint`
+> I want to become a better AI engineer, build my own product, prepare for interviews, and stay consistent with my daily routine.
 
-## Engineering Conventions
+Instead of simply giving you advice, V3 can help turn that intention into an actionable system.
 
-- **Zero Code Comments Policy:** Never write comments in source code (`//`, `/* */`, JSDoc, or inline comments) — now or in future development. Write clear, self-explanatory symbols, types, and modular functions instead.
-- **Standard Feature Module Layout:** Every backend module in `server/src/modules/<feature>/` follows the convention: `<feature>.routes.ts`, `<feature>.controller.ts`, `<feature>.service.ts`, `<feature>.repository.ts`, `<feature>.schema.ts`, `<feature>.types.ts`, and `<feature>.test.ts`.
+It can:
 
-## Documentation
+1. Understand what you're trying to achieve.
+2. Break your objectives into goals, milestones, and tasks.
+3. Identify priorities and dependencies.
+4. Build a realistic schedule around your availability.
+5. Track progress and recognize when you're falling behind.
+6. Suggest changes when your priorities or circumstances change.
+7. Remember relevant information from previous interactions.
+8. Research topics and gather information when needed.
+9. Coordinate with connected applications and services.
+10. Execute approved actions and report what happened.
 
-- [Development Roadmap](docs/development-roadmap.md) — Full 3-phase development plan, feature scope, and milestones
-- [Phase 2 Technical Specification](docs/phase-2-technical-spec.md) — Hybrid intelligence architecture, LangGraph state/agent contracts, packages, and Milestones `2.1`–`2.10`
-- [Architecture](docs/architecture.md) — Modular monolith design, backend/frontend structure, AI layer, and coding standards
-- [API Reference](docs/api.md) — Versioning, error envelope, current endpoints, and planned module endpoints
-- [Database Guide](docs/database.md) — Supabase PostgreSQL, Prisma setup, pgvector strategy, and domain entities
-- [Deployment & Recovery](docs/deployment.md) — Cloud containerization, GitHub Actions CI/CD, Trigger.dev, and Supabase backup/recovery verification
+You shouldn't have to explain your entire situation every time you interact with your assistant.
 
+You shouldn't have to manually coordinate every application.
+
+And you shouldn't have to rebuild your plans every time something unexpected happens.
+
+**V3 should understand the bigger picture and help you keep moving forward.**
+
+---
+
+## What V3 Does
+
+V3 brings twelve interconnected capabilities into one personal system.
+
+### 01. Goals & Life Management
+
+A place to define what you want to achieve and keep track of the bigger picture.
+
+- Create yearly, quarterly, monthly, and weekly goals.
+- Organize goals into parent goals and subgoals.
+- Define milestones and measure progress.
+- Connect goals to the work required to achieve them.
+- Understand how daily activities contribute to long-term objectives.
+
+### 02. Intelligent Planning
+
+Turn vague intentions into structured, actionable plans.
+
+- Convert natural-language objectives into plans.
+- Break large goals into milestones and tasks.
+- Identify dependencies and priorities.
+- Generate alternative approaches.
+- Adjust plans when circumstances change.
+
+### 03. Smart Scheduling
+
+Make time work around your actual priorities.
+
+- Organize daily schedules and time blocks.
+- Find available time for important activities.
+- Detect scheduling conflicts.
+- Suggest better time allocations.
+- Reschedule work when plans change.
+
+### 04. Task Management
+
+Manage the actual execution of your plans.
+
+- Create tasks and nested subtasks.
+- Set priorities, deadlines, and statuses.
+- Connect tasks to goals and milestones.
+- Track overdue and blocked work.
+- Understand what needs attention next.
+
+### 05. Accountability
+
+Help ensure that intentions turn into consistent action.
+
+- Detect missed tasks and delayed commitments.
+- Monitor progress against planned work.
+- Identify patterns of procrastination.
+- Generate contextual reminders and interventions.
+- Recommend adjustments when execution falls behind.
+
+### 06. Unified Notifications
+
+Bring important updates from different services into one place.
+
+- Receive reminders and task updates.
+- Connect communication channels.
+- Configure notification preferences.
+- Manage delivery history and failed notifications.
+- Receive relevant updates without constantly checking applications.
+
+### 07. Voice & Calling
+
+Interact with your assistant naturally through speech.
+
+- Give voice commands.
+- Convert speech into actionable requests.
+- Support multiple languages.
+- Translate and generate speech.
+- Explore voice-based and telephony interactions.
+
+### 08. Persistent Memory
+
+An assistant should not start from zero every time.
+
+V3 is designed to build useful context over time.
+
+- Remember important preferences and information.
+- Maintain conversation history.
+- Retain project-specific context.
+- Retrieve relevant information from previous interactions.
+- Build a connected understanding of ongoing activities.
+
+### 09. Research & Knowledge
+
+Turn information into useful knowledge and decisions.
+
+- Research topics and questions.
+- Analyze information from multiple sources.
+- Summarize findings and identify key insights.
+- Preserve useful research for future reference.
+- Connect research to relevant goals and projects.
+
+### 10. Developer Assistant
+
+A dedicated assistant for software development workflows.
+
+- Connect development repositories.
+- Monitor issues and pull requests.
+- Inspect repository activity.
+- Convert relevant development issues into tasks.
+- Help organize and coordinate engineering work.
+
+### 11. Autonomous Execution
+
+Move beyond suggestions and enable real work to happen.
+
+- Execute multi-step workflows.
+- Select appropriate tools for a task.
+- Delegate work to specialized agents.
+- Run background tasks independently.
+- Monitor execution and handle failures.
+- Pause for approval when an action requires permission.
+- Verify results and report completed actions.
+
+### 12. Personal Analytics
+
+Understand how you're spending your time and whether you're making progress.
+
+- Track task completion and goal progress.
+- Analyze productivity patterns.
+- Identify recurring bottlenecks.
+- Understand where plans are failing.
+- Generate insights that help improve future decisions.
+
+---
+
+## How It Works
+
+V3 is built around a continuous cycle of understanding, planning, execution, and improvement.
+
+**1. Understand**
+
+You communicate an objective, request, problem, or instruction. V3 interprets it using relevant personal context, goals, preferences, and previous interactions.
+
+**2. Plan**
+
+The system determines what needs to happen, develops a suitable approach, breaks down complex work, and identifies the tools or capabilities required.
+
+**3. Execute**
+
+V3 coordinates its specialized agents and connected tools to carry out the work. It can perform appropriate actions, delegate subtasks, and run workflows in the background.
+
+**4. Observe**
+
+It tracks results, monitors progress, detects failures, and recognizes when something has changed.
+
+**5. Adapt**
+
+When the original approach no longer works, V3 can reconsider the plan, adjust priorities, and determine the next appropriate action.
+
+**6. Remember**
+
+Useful outcomes, decisions, and context can become part of its persistent memory, making future interactions more informed.
+
+This isn't intended to be a rigid sequence that every request must follow. The system should determine the appropriate approach based on the objective and situation.
+
+---
+
+## A System That Works With You
+
+V3 is intended to become a central point of coordination for your digital life.
+
+Rather than forcing you to abandon the applications you already use, it aims to connect the services where your information and activities already exist.
+
+Its broader integration vision includes:
+
+- **Communication:** WhatsApp, Telegram, Discord, and email.
+- **Calendar:** Calendar events, availability, and scheduling.
+- **Development:** GitHub repositories, issues, and pull requests.
+- **Knowledge:** Conversations, documents, notes, and research.
+- **Voice:** Speech recognition, translation, speech generation, and calling.
+
+The goal is not to create another isolated application.
+
+It is to create an intelligent layer that can understand and coordinate activity across your existing digital environment.
+
+---
+
+## Built Around Controlled Autonomy
+
+Autonomy should not mean giving an AI unrestricted access to someone's life.
+
+V3 is designed around a clear distinction between deciding what should happen and having permission to execute it.
+
+The system should be able to independently reason, plan, research, coordinate, and perform permitted actions.
+
+However, sensitive or consequential actions should respect user-defined permissions and approval requirements.
+
+This means:
+
+- Personal information remains under the user's control.
+- Actions are governed by permissions.
+- Consequential operations can require explicit approval.
+- Executed actions are recorded and traceable.
+- Failed operations can be investigated and recovered.
+- The user can maintain visibility and control over autonomous activity.
+
+**The objective is useful autonomy, not uncontrolled automation.**
+
+---
+
+## The Long-Term Direction
+
+V3 starts with personal management and autonomous execution, but the broader vision is much larger.
+
+Over time, it should become a system that understands an individual's goals, responsibilities, projects, preferences, and digital environment well enough to proactively help manage and execute everyday work.
+
+A system that doesn't just answer:
+
+"What should I do?"
+
+But can also help answer:
+
+"Why does this matter?"
+
+"What needs to happen next?"
+
+"Can you take care of it?"
+
+"Did it get done?"
+
+And when something goes wrong:
+
+"What should we change?"
+
+The long-term ambition is to move from an assistant that responds to instructions to one that can continuously help manage and execute meaningful work, within the boundaries set by its user.
+
+---
+
+## Development Roadmap
+
+V3 is being developed in three major phases.
+
+| Phase | Focus | Status |
+|---|---|---|
+| Phase 1 | Core personal management foundation | Completed |
+| Phase 2 | Autonomous agents, memory, integrations, and execution | Backend implementation completed |
+| Phase 3 | Mobile experience, analytics, and further product expansion | Planned |
+
+The initial backend and web foundation are in place. The next stage focuses on completing the broader product experience and expanding its capabilities.
+
+---
+
+## Project Structure
+
+The repository contains three independent applications:
+
+- `server/` — The central application and intelligence layer.
+- `client/web/` — The web-based personal command center.
+- `client/mobile/` — The planned mobile experience.
+- `docs/` — Project architecture, specifications, and development documentation.
+
+---
+
+## Project Status
+
+V3 is an actively developed project.
+
+The initial foundation and autonomous intelligence backend have been implemented. The product is progressing toward a complete, integrated personal assistant experience.
+
+Not every capability described in the long-term vision should be assumed to be production-ready or fully connected yet.
+
+---
+
+## The Principle Behind V3
+
+Technology should reduce the effort required to manage our lives, not create more work managing the technology itself.
+
+We should be able to focus on what we want to achieve while an intelligent system helps coordinate the planning, organization, information, and execution behind it.
+
+**Less managing. More doing.**
+
+**V3 — Your life, connected. Your goals, in motion.**
