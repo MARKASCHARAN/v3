@@ -324,7 +324,7 @@ export function IntegrationsView() {
                 </div>
               ))}
               {mcpOutput && (
-                <pre className="v3-black-panel max-h-48 overflow-auto rounded-xl p-3 font-mono text-xs text-orange-300">
+                <pre className="v3-black-panel max-h-48 max-w-full overflow-auto rounded-xl p-3 font-mono text-xs text-orange-300">
                   {mcpOutput}
                 </pre>
               )}

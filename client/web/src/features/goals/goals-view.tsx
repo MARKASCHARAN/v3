@@ -197,7 +197,7 @@ export function GoalsView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex rounded-xl bg-[#f4f3f1] p-1">
+            <div className="inline-flex max-w-full overflow-x-auto rounded-xl bg-[#f4f3f1] p-1">
               {[
                 { key: 'ACTIVE' as const, label: `Active (${metrics.activeCount})` },
                 { key: 'COMPLETED' as const, label: `Complete (${metrics.completedCount})` },
@@ -210,7 +210,7 @@ export function GoalsView() {
                     key={tab.key}
                     type="button"
                     onClick={() => setFilterStatus(tab.key)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                       active
                         ? 'bg-[#2f312f] text-[#ffffff] shadow-xs'
                         : 'text-[#5f5e5e] hover:text-[#1a1c1a]'
@@ -225,7 +225,7 @@ export function GoalsView() {
             <button
               type="button"
               onClick={() => setComposerOpen((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#efeeeb] px-4 py-2 text-sm font-semibold text-[#1a1c1a] shadow-2xs transition-colors hover:bg-[#e9e8e5]"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#efeeeb] px-4 py-2 text-sm font-semibold text-[#1a1c1a] shadow-2xs transition-colors hover:bg-[#e9e8e5] sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               <span>{composerOpen ? 'Close Composer' : 'New Parent Goal'}</span>
@@ -233,7 +233,7 @@ export function GoalsView() {
 
             <Link
               href="/dashboard/planning"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#ff6b35] px-4 py-2 text-sm font-semibold text-[#ffffff] shadow-sm transition-opacity hover:opacity-95"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#ff6b35] px-4 py-2 text-sm font-semibold text-[#ffffff] shadow-sm transition-opacity hover:opacity-95 sm:w-auto"
             >
               <Sparkles className="h-4 w-4" />
               <span>Decompose with AI Planner</span>
@@ -504,7 +504,7 @@ export function GoalsView() {
                     </div>
 
                     <div
-                      className="flex min-w-[140px] flex-row items-center justify-between gap-2 md:flex-col md:items-end"
+                      className="flex w-full flex-row items-center justify-between gap-2 md:w-auto md:min-w-[140px] md:flex-col md:items-end"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="text-right">
@@ -564,23 +564,27 @@ export function GoalsView() {
                             key={m.id}
                             className="flex items-center justify-between gap-3 rounded-lg bg-[#f4f3f1] px-3 py-2.5 transition-colors hover:bg-[#efeeeb]"
                           >
-                            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-sm text-[#1a1c1a]">
+                            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-sm text-[#1a1c1a]">
                               <input
                                 type="checkbox"
                                 checked={m.isCompleted}
                                 onChange={() =>
                                   handleToggleMilestone(goal.id, m.id, m.isCompleted)
                                 }
-                                className="accent-[#ff6b35]"
+                                className="shrink-0 accent-[#ff6b35]"
                               />
-                              <span className={m.isCompleted ? 'line-through opacity-60' : 'font-medium'}>
+                              <span
+                                className={`break-words ${
+                                  m.isCompleted ? 'line-through opacity-60' : 'font-medium'
+                                }`}
+                              >
                                 {m.title}
                               </span>
                             </label>
                             <button
                               type="button"
                               onClick={() => handleDeleteMilestone(goal.id, m.id)}
-                              className="font-mono text-[11px] text-[#5f5e5e] hover:text-[#ba1a1a]"
+                              className="shrink-0 font-mono text-[11px] text-[#5f5e5e] hover:text-[#ba1a1a]"
                             >
                               Remove
                             </button>
@@ -588,7 +592,7 @@ export function GoalsView() {
                         ))}
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <input
                           type="text"
                           value={milestoneInputs[goal.id] || ''}
@@ -599,9 +603,13 @@ export function GoalsView() {
                             }))
                           }
                           placeholder="Add concrete milestone..."
-                          className={inputClassName}
+                          className={`min-w-0 flex-1 ${inputClassName}`}
                         />
-                        <Button variant="dark" onClick={() => handleAddMilestone(goal.id)}>
+                        <Button
+                          variant="dark"
+                          onClick={() => handleAddMilestone(goal.id)}
+                          className="w-full sm:w-auto"
+                        >
                           Add
                         </Button>
                       </div>
@@ -612,7 +620,7 @@ export function GoalsView() {
             })}
           </div>
 
-          <aside className="sticky top-20 flex flex-col gap-4 xl:col-span-4">
+          <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-20 xl:col-span-4">
             {inspectedGoal && (
               <div className="flex flex-col gap-4 rounded-xl bg-[#ffffff] p-5 shadow-xs sm:p-6">
                 <div className="flex items-center justify-between">

@@ -47,10 +47,10 @@ export function LandingView() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#1a1c1a] font-sans antialiased selection:bg-[#ff6b35]/20 selection:text-[#5f1900]">
+    <div className="min-h-screen overflow-x-clip bg-[#faf9f6] text-[#1a1c1a] font-sans antialiased selection:bg-[#ff6b35]/20 selection:text-[#5f1900]">
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#faf9f6]/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
-        <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between px-4 sm:px-8">
-          <div className="flex items-center gap-10">
+        <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between gap-2 px-4 sm:px-8">
+          <div className="flex items-center gap-6 lg:gap-10">
             <Link href="/" className="flex select-none items-center gap-1 tracking-tight">
               <span className="text-base font-semibold tracking-tighter text-[#1a1c1a]">V3</span>
               <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-[#5f5e5e]">
@@ -160,25 +160,25 @@ export function LandingView() {
 
       <main className="w-full bg-[#faf9f6] pt-16">
         <div className="flex w-full flex-col">
-          <section className="relative mx-auto flex w-full max-w-[1400px] flex-col items-center px-4 pb-8 pt-12 text-center sm:px-8 sm:pt-14">
-            <div className="pointer-events-none absolute -top-12 left-1/2 -z-10 h-[340px] w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#ffdbd0]/40 via-[#ffb59e]/20 to-transparent blur-3xl" />
+          <section className="relative mx-auto flex w-full max-w-[1400px] flex-col items-center px-4 pb-8 pt-10 text-center sm:px-8 sm:pt-14">
+            <div className="pointer-events-none absolute -top-12 left-1/2 -z-10 h-[300px] w-[92vw] max-w-[720px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#ffdbd0]/40 via-[#ffb59e]/20 to-transparent blur-3xl sm:h-[340px]" />
 
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="mb-6 inline-flex cursor-default items-center gap-2 rounded-full bg-[#ffffff] px-4 py-1.5 shadow-sm transition-transform hover:scale-[1.02]"
+              className="mb-5 inline-flex max-w-full cursor-default flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#ffffff] px-3.5 py-1.5 shadow-sm transition-transform hover:scale-[1.02] sm:mb-6 sm:gap-2 sm:px-4"
             >
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff6b35] opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-[#ff6b35]" />
               </span>
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#1a1c1a]">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#1a1c1a] sm:text-[11px]">
                 Meet V3 OS
               </span>
-              <span className="font-mono text-[11px] text-[#e1bfb5]">•</span>
-              <span className="text-[13px] font-medium text-[#594139]">
-                Your Personal AI Operating System
+              <span className="hidden font-mono text-[11px] text-[#e1bfb5] sm:inline">•</span>
+              <span className="text-xs font-medium text-[#594139] sm:text-[13px]">
+                Personal AI Operating System
               </span>
             </motion.div>
 
@@ -186,7 +186,7 @@ export function LandingView() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.05 }}
-              className="mb-4 max-w-4xl text-4xl font-semibold leading-[1.08] tracking-[-0.03em] text-[#1a1c1a] sm:text-[56px]"
+              className="mb-4 max-w-4xl text-[32px] font-semibold leading-[1.12] tracking-[-0.03em] text-[#1a1c1a] sm:text-[56px] sm:leading-[1.08]"
             >
               Your life &amp; work, running{' '}
               <span className="relative inline-block bg-gradient-to-r from-[#ff6b35] via-[#ad3300] to-[#ff6b35] bg-clip-text text-transparent underline decoration-[#ffdbd0] decoration-wavy decoration-2 underline-offset-8">
@@ -252,9 +252,9 @@ export function LandingView() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.55 }}
-              className="relative overflow-hidden rounded-3xl bg-[#ffffff] p-4 shadow-xl sm:p-6"
+              className="relative overflow-hidden rounded-2xl bg-[#ffffff] p-3.5 shadow-xl sm:rounded-3xl sm:p-6"
             >
-              <div className="mb-4 flex items-center justify-between rounded-xl bg-[#f4f3f1] px-4 py-2.5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f4f3f1] px-3 py-2.5 sm:px-4">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5">
                     <div className="h-2.5 w-2.5 rounded-full bg-[#ba1a1a]" />
@@ -375,11 +375,11 @@ export function LandingView() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <button
                         type="button"
                         onClick={() => setShipped((prev) => !prev)}
-                        className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-semibold text-[#ffffff] shadow-sm transition-all duration-150 ${
+                        className={`flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-[#ffffff] shadow-sm transition-all duration-150 sm:w-auto sm:py-2 ${
                           shipped
                             ? 'bg-[#2f312f] hover:bg-[#1a1c1a]'
                             : 'bg-[#ff6b35] hover:bg-[#ad3300]'
@@ -658,7 +658,7 @@ export function LandingView() {
                   e.preventDefault();
                   setCtaSubmitted(true);
                 }}
-                className="mb-5 flex w-full max-w-md flex-col items-center gap-2 rounded-full bg-[#ffffff] p-1.5 shadow-md sm:flex-row"
+                className="mb-5 flex w-full max-w-md flex-col items-center gap-2 rounded-2xl bg-[#ffffff] p-2 shadow-md sm:flex-row sm:rounded-full sm:p-1.5"
               >
                 <input
                   type="email"
@@ -666,11 +666,11 @@ export function LandingView() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
-                  className="w-full bg-transparent px-4 py-3 text-sm text-[#1a1c1a] placeholder:text-[#594139]/60 focus:outline-none"
+                  className="w-full min-w-0 bg-transparent px-4 py-2.5 text-sm text-[#1a1c1a] placeholder:text-[#594139]/60 focus:outline-none sm:py-3"
                 />
                 <button
                   type="submit"
-                  className="w-full shrink-0 rounded-full bg-[#ff6b35] px-6 py-3 text-sm font-semibold text-[#ffffff] transition-all duration-150 hover:bg-[#ad3300] sm:w-auto"
+                  className="w-full shrink-0 rounded-xl bg-[#ff6b35] px-6 py-3 text-sm font-semibold text-[#ffffff] transition-all duration-150 hover:bg-[#ad3300] sm:w-auto sm:rounded-full"
                 >
                   Get Started Free
                 </button>
@@ -785,16 +785,16 @@ export function LandingView() {
               <button
                 type="button"
                 onClick={handleCopyCurl}
-                className="flex w-full items-center justify-between gap-2 rounded-lg bg-[#faf9f6] px-4 py-2 font-mono text-[13px] text-[#594139] shadow-[0_1px_8px_rgba(0,0,0,0.04)] hover:text-[#1a1c1a]"
+                className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg bg-[#faf9f6] px-4 py-2 font-mono text-[13px] text-[#594139] shadow-[0_1px_8px_rgba(0,0,0,0.04)] hover:text-[#1a1c1a]"
               >
-                <span className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] text-[#ff6b35]">$</span>
-                  <span>{installSnippet}</span>
+                <span className="flex min-w-0 items-center gap-2 truncate">
+                  <span className="shrink-0 font-mono text-[11px] text-[#ff6b35]">$</span>
+                  <span className="truncate">{installSnippet}</span>
                 </span>
                 {copiedCurl ? (
-                  <Check className="h-3.5 w-3.5 text-[#ab3500]" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-[#ab3500]" />
                 ) : (
-                  <Copy className="h-3.5 w-3.5 text-[#5f5e5e]" />
+                  <Copy className="h-3.5 w-3.5 shrink-0 text-[#5f5e5e]" />
                 )}
               </button>
             </div>

@@ -183,16 +183,16 @@ export function VoiceView() {
               Synthesize localized Bhashini TTS audio to Supabase Storage
             </label>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <input
               type="text"
               required
               value={commandText}
               onChange={(e) => setCommandText(e.target.value)}
               placeholder="Enter spoken phrase or command in source language..."
-              className={`flex-1 ${inputClassName}`}
+              className={`w-full sm:flex-1 ${inputClassName}`}
             />
-            <Button type="submit" disabled={runningCommand}>
+            <Button type="submit" disabled={runningCommand} className="w-full sm:w-auto">
               <Play className="h-4 w-4" />
               {runningCommand ? 'Executing...' : 'Run Voice Command'}
             </Button>
@@ -336,7 +336,7 @@ export function VoiceView() {
                   </p>
                 )}
                 {vs.ttsAudioKey && (
-                  <p className="font-mono text-[11px] text-neutral-400">{vs.ttsAudioKey}</p>
+                  <p className="break-all font-mono text-[11px] text-neutral-400">{vs.ttsAudioKey}</p>
                 )}
               </div>
             ))}

@@ -163,7 +163,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] text-[#1a1c1a] antialiased">
+    <div className="min-h-screen overflow-x-clip bg-[#faf9f6] text-[#1a1c1a] antialiased">
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 flex-col border-r border-[#e9e8e5] bg-[#ffffff] lg:flex">
         <div className="border-b border-[#e9e8e5] p-4">
           <div className="flex items-center justify-between">
@@ -292,22 +292,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="lg:pl-72">
-        <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[#e9e8e5] bg-[#ffffff]/90 px-4 backdrop-blur-md lg:left-72 lg:px-6">
-          <div className="flex items-center gap-3">
+      <div className="min-w-0 lg:pl-72">
+        <header className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-[#e9e8e5] bg-[#ffffff]/95 px-3 backdrop-blur-md sm:h-16 sm:px-5 lg:left-72 lg:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setMobileNavOpen(true)}
               aria-label="Open navigation menu"
-              className="rounded-lg border border-[#e9e8e5] bg-[#f4f3f1] p-1.5 text-[#1a1c1a] lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#e9e8e5] bg-[#f4f3f1] text-[#1a1c1a] lg:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center gap-1 font-mono text-[11px] text-[#594139]">
-              <span className="text-[#5f5e5e]">AETHER</span>
-              <ChevronRight className="h-3.5 w-3.5 text-[#5f5e5e]" />
-              <span className="font-semibold uppercase text-[#1a1c1a]">
+            <div className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-[#594139]">
+              <span className="hidden text-[#5f5e5e] sm:inline">AETHER</span>
+              <ChevronRight className="hidden h-3.5 w-3.5 text-[#5f5e5e] sm:inline" />
+              <span className="truncate font-semibold uppercase text-[#1a1c1a]">
                 {currentNav?.label || 'SYSTEM'}
               </span>
             </div>
@@ -317,7 +317,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="hidden w-72 items-center gap-2 rounded-full border border-[#e9e8e5] bg-[#f4f3f1] px-3.5 py-1.5 text-left transition-all hover:border-[#e1bfb5] md:flex"
+              className="hidden w-64 items-center gap-2 rounded-full border border-[#e9e8e5] bg-[#f4f3f1] px-3.5 py-1.5 text-left transition-all hover:border-[#e1bfb5] md:flex lg:w-72"
             >
               <Search className="h-3.5 w-3.5 text-[#5f5e5e]" />
               <span className="flex-1 text-[13px] text-[#5f5e5e]">Omnisearch intent...</span>
@@ -327,7 +327,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Omnisearch workspace"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[#594139] transition-colors hover:bg-[#f4f3f1] md:hidden"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+
             <div className="hidden items-center gap-1.5 rounded-full border border-[#e9e8e5] bg-[#f4f3f1] px-2.5 py-1 lg:flex">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff6b35] opacity-75" />
@@ -339,26 +348,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Link
               href="/dashboard/notifications"
               title="Communication Center"
-              className="relative rounded-lg p-1.5 text-[#594139] transition-colors hover:bg-[#f4f3f1]"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#594139] transition-colors hover:bg-[#f4f3f1]"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#ff6b35] ring-2 ring-[#ffffff]" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ff6b35] ring-2 ring-[#ffffff]" />
             </Link>
 
             <Link
               href="/dashboard/ops"
               title="Autonomy Operations"
-              className="rounded-lg p-1.5 text-[#594139] transition-colors hover:bg-[#f4f3f1]"
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-[#594139] transition-colors hover:bg-[#f4f3f1] sm:flex"
             >
               <Activity className="h-4 w-4" />
             </Link>
 
-            <div className="h-5 w-px bg-[#e9e8e5]" />
+            <div className="hidden h-5 w-px bg-[#e9e8e5] sm:block" />
 
             <button
               type="button"
               onClick={handleOpenProfile}
-              className="flex items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-[#f4f3f1]"
+              className="flex items-center gap-2 rounded-xl p-1 text-left transition-colors hover:bg-[#f4f3f1]"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ab3500] text-[#ffffff] shadow-xs">
                 <User className="h-4 w-4" />
@@ -376,7 +385,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-screen w-full bg-[#faf9f6] pt-16">
+        <main className="min-h-screen w-full min-w-0 bg-[#faf9f6] pb-20 pt-14 sm:pt-16 lg:pb-8">
           {!hasSession && (
             <div className="flex min-h-[60vh] items-center justify-center p-6">
               <div className="flex items-center gap-3 rounded-2xl border border-[#e9e8e5] bg-[#ffffff] px-5 py-3 text-sm text-[#5f5e5e] shadow-sm">
@@ -386,12 +395,54 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </div>
           )}
           {hasSession && (
-            <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+            <div className="mx-auto w-full min-w-0 max-w-[1680px] px-3.5 py-4 sm:px-6 lg:px-8 lg:py-6">
               <MotionPage key={pathname}>{children}</MotionPage>
             </div>
           )}
         </main>
       </div>
+
+      <nav
+        aria-label="Mobile quick navigation"
+        className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-[#e9e8e5] bg-[#ffffff]/95 px-1 py-1.5 backdrop-blur-md lg:hidden"
+      >
+        {[
+          { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+          { href: '/dashboard/goals', label: 'Goals', icon: Flag },
+          { href: '/dashboard/tasks', label: 'Tasks', icon: SplitSquareVertical },
+          { href: '/dashboard/assistant', label: 'AI Core', icon: Bot },
+        ].map((item) => {
+          const active = pathname === item.href;
+          const Icon = item.icon;
+          const showPending =
+            item.href === '/dashboard/assistant' &&
+            pendingApprovalsCount !== null &&
+            pendingApprovalsCount > 0;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative flex min-w-[60px] flex-col items-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-medium transition-colors ${
+                active ? 'text-[#ab3500]' : 'text-[#5f5e5e]'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{item.label}</span>
+              {showPending && (
+                <span className="absolute right-2.5 top-0.5 flex h-2 w-2 rounded-full bg-[#ff6b35]" />
+              )}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(true)}
+          className="flex min-w-[60px] flex-col items-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-medium text-[#5f5e5e]"
+        >
+          <Menu className="h-4 w-4" />
+          <span>Modules</span>
+        </button>
+      </nav>
 
       <AnimatePresence>
         {mobileNavOpen && (
@@ -402,11 +453,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             className="fixed inset-0 z-50 flex bg-[#1a1c1a]/40 backdrop-blur-xs lg:hidden"
           >
             <motion.div
-              initial={{ x: -280 }}
+              initial={{ x: -300 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: -300 }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-              className="flex h-full w-72 flex-col bg-[#ffffff] shadow-2xl"
+              className="flex h-full w-[84vw] max-w-72 flex-col bg-[#ffffff] shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-[#e9e8e5] p-4">
                 <span className="text-sm font-bold text-[#1a1c1a]">AETHER OS // V3</span>
@@ -433,7 +484,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                             key={item.href}
                             href={item.href}
                             onClick={() => setMobileNavOpen(false)}
-                            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm ${
+                            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-sm ${
                               active
                                 ? 'bg-[#ff6b35] font-medium text-[#ffffff]'
                                 : 'text-[#594139] hover:bg-[#efeeeb]'
@@ -448,6 +499,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   </div>
                 ))}
               </div>
+              {hasSession && (
+                <div className="border-t border-[#e9e8e5] p-3">
+                  <Button variant="secondary" onClick={handleLogout} className="w-full py-2 text-xs">
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign out ({session?.user?.name || session?.user?.email || 'Operator'})
+                  </Button>
+                </div>
+              )}
             </motion.div>
             <div className="flex-1" onClick={() => setMobileNavOpen(false)} />
           </motion.div>

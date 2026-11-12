@@ -553,7 +553,7 @@ export function TasksView() {
             })}
           </div>
 
-          <aside className="sticky top-20 flex w-full shrink-0 flex-col gap-4 rounded-xl bg-[#ffffff] p-5 shadow-md xl:w-[420px]">
+          <aside className="flex w-full min-w-0 shrink-0 flex-col gap-4 rounded-xl bg-[#ffffff] p-5 shadow-md xl:sticky xl:top-20 xl:w-[420px]">
             {inspectedTask && (
               <>
                 <div className="flex items-center justify-between border-b border-[#e9e8e5] pb-3">
@@ -690,15 +690,15 @@ export function TasksView() {
                     </div>
                   )}
 
-                  <form onSubmit={handleAddSubtask} className="flex gap-2 pt-1">
+                  <form onSubmit={handleAddSubtask} className="flex flex-col gap-2 pt-1 sm:flex-row">
                     <input
                       type="text"
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       placeholder="Add child subtask..."
-                      className={inputClassName}
+                      className={`min-w-0 flex-1 ${inputClassName}`}
                     />
-                    <Button type="submit" variant="dark">
+                    <Button type="submit" variant="dark" className="w-full sm:w-auto">
                       Add
                     </Button>
                   </form>

@@ -208,7 +208,7 @@ export function ResearchView() {
                           href={src.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-orange-600 underline hover:border-orange-300"
+                          className="inline-flex max-w-full items-center gap-1 break-all rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] font-medium text-orange-600 underline hover:border-orange-300"
                         >
                           {src.title || src.url}
                           <ExternalLink className="h-3 w-3" />

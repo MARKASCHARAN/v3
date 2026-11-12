@@ -171,17 +171,17 @@ export function ScheduleView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDateOverride(e.target.value)}
-            className={inlineInputClassName}
+            className={`w-full sm:w-auto ${inlineInputClassName}`}
           />
           <select
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            className={inlineInputClassName}
+            className={`w-full sm:w-auto ${inlineInputClassName}`}
           >
             <option value={30}>30 min slots</option>
             <option value={60}>60 min slots</option>

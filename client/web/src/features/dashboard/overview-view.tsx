@@ -222,7 +222,7 @@ export function OverviewView() {
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-4 self-start rounded-2xl bg-[#f4f3f1] px-4 py-2.5 shadow-2xs lg:self-end">
+        <div className="relative z-10 flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#f4f3f1] px-4 py-2.5 shadow-2xs sm:w-auto sm:gap-4 lg:self-end">
           <div className="flex flex-col">
             <span className="font-mono text-[10px] uppercase tracking-wider text-[#5f5e5e]">
               Chrono Synchronizer
@@ -231,7 +231,7 @@ export function OverviewView() {
               {utcClock}
             </span>
           </div>
-          <div className="h-8 w-px bg-[#e3e2e0]" />
+          <div className="hidden h-8 w-px bg-[#e3e2e0] sm:block" />
           <div className="flex flex-col">
             <span className="font-mono text-[10px] uppercase tracking-wider text-[#5f5e5e]">
               Risk Score
@@ -243,7 +243,12 @@ export function OverviewView() {
               </span>
             </div>
           </div>
-          <Button variant="secondary" onClick={handleScanMissedTasks} disabled={scanning} className="py-1.5 text-xs">
+          <Button
+            variant="secondary"
+            onClick={handleScanMissedTasks}
+            disabled={scanning}
+            className="w-full py-1.5 text-xs sm:w-auto"
+          >
             <RefreshCw className={`h-3.5 w-3.5 ${scanning ? 'animate-spin' : ''}`} />
             {scanning ? 'Scanning...' : 'Scan Missed'}
           </Button>

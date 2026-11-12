@@ -230,15 +230,15 @@ export function MemoryView() {
           {hybridResult && <Badge tone="orange">Mode: {hybridResult.mode}</Badge>}
         </div>
 
-        <form onSubmit={handleHybridSearch} className="flex flex-wrap gap-2">
+        <form onSubmit={handleHybridSearch} className="flex flex-col gap-2 sm:flex-row">
           <input
             type="text"
             value={hybridQuery}
             onChange={(e) => setHybridQuery(e.target.value)}
             placeholder="Ask or search semantically across project & goal memory..."
-            className={`flex-1 ${baseFieldClassName}`}
+            className={`w-full min-w-0 sm:flex-1 ${baseFieldClassName}`}
           />
-          <Button type="submit" disabled={hybridLoading}>
+          <Button type="submit" disabled={hybridLoading} className="w-full sm:w-auto">
             {hybridLoading ? 'Searching...' : 'Hybrid Search'}
           </Button>
         </form>

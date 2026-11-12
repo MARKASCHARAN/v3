@@ -205,10 +205,10 @@ export function OpsView() {
               {events.map((evt) => (
                 <div
                   key={evt.id}
-                  className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs"
                 >
-                  <div>
-                    <p className="font-mono font-bold text-neutral-950">{evt.eventType}</p>
+                  <div className="min-w-0">
+                    <p className="break-all font-mono font-bold text-neutral-950">{evt.eventType}</p>
                     <p className="text-neutral-500">Source: {evt.source}</p>
                   </div>
                   <Badge
@@ -240,10 +240,10 @@ export function OpsView() {
               {jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs"
                 >
-                  <div>
-                    <p className="font-mono font-bold text-neutral-950">{job.jobType}</p>
+                  <div className="min-w-0">
+                    <p className="break-all font-mono font-bold text-neutral-950">{job.jobType}</p>
                     <p className="text-neutral-500 tabular-nums">
                       Attempts: {job.attempts}/{job.maxAttempts}
                     </p>

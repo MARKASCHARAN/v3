@@ -168,7 +168,7 @@ export function AssistantView() {
     <div className="flex flex-col gap-6">
       <section className="rounded-xl bg-[#ffffff] p-5 shadow-xs sm:p-6">
         <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-center">
-          <div className="grid flex-1 grid-cols-2 gap-5 sm:grid-cols-4 xl:gap-8">
+          <div className="grid flex-1 grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:gap-5 xl:grid-cols-4 xl:gap-8">
             <div className="flex flex-col">
               <span className="font-mono text-[10px] uppercase tracking-wider text-[#5f5e5e]">
                 Total Agent Runs
@@ -233,13 +233,13 @@ export function AssistantView() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 rounded-xl bg-[#f4f3f1] p-4 xl:bg-transparent xl:p-0">
-            <div className="flex flex-col gap-1">
+          <div className="flex w-full flex-wrap items-center gap-3 rounded-xl bg-[#f4f3f1] p-3.5 sm:gap-4 sm:p-4 xl:w-auto xl:bg-transparent xl:p-0">
+            <div className="flex w-full flex-col gap-1 sm:w-auto">
               <span className="font-mono text-[10px] uppercase text-[#5f5e5e]">Execution Thread</span>
               <select
                 value={threadId}
                 onChange={(e) => setThreadId(e.target.value)}
-                className="rounded-lg bg-[#ffffff] px-3 py-2 font-mono text-xs text-[#1a1c1a] shadow-xs focus:outline-none focus:ring-1 focus:ring-[#1a1c1a]"
+                className="w-full rounded-lg bg-[#ffffff] px-3 py-2 font-mono text-xs text-[#1a1c1a] shadow-xs focus:outline-none focus:ring-1 focus:ring-[#1a1c1a] sm:w-auto"
               >
                 <option value="">New Ephemeral Thread</option>
                 {executions.map((exec) => (
@@ -457,7 +457,7 @@ export function AssistantView() {
               <select
                 value={activeExecution?.id || ''}
                 onChange={(e) => setSelectedExecutionId(e.target.value)}
-                className={`${inputClassName} w-auto py-1 font-mono text-xs`}
+                className={`${inputClassName} w-full max-w-full py-1 font-mono text-xs sm:w-auto`}
               >
                 {executions.map((ex) => (
                   <option key={ex.id} value={ex.id}>
@@ -610,11 +610,11 @@ export function AssistantView() {
                   </span>
                 </div>
 
-                <h3 className="text-lg font-medium leading-tight text-[#1a1c1a]">
-                  Approve Tool: <code className="font-mono">{primaryApproval.toolName}</code>
+                <h3 className="break-words text-lg font-medium leading-tight text-[#1a1c1a]">
+                  Approve Tool: <code className="break-all font-mono">{primaryApproval.toolName}</code>
                 </h3>
 
-                <div className="overflow-x-auto rounded-lg bg-[#f4f3f1] p-3.5 shadow-inner">
+                <div className="max-w-full overflow-x-auto rounded-lg bg-[#f4f3f1] p-3.5 shadow-inner">
                   <div className="mb-2 flex items-center justify-between rounded bg-[#ffffff]/60 px-2 py-1 font-mono text-[10px] font-semibold uppercase text-[#5f5e5e]">
                     <span>Tool Call Payload</span>
                     <span>JSON Schema</span>
@@ -731,7 +731,25 @@ export function AssistantView() {
           </span>
         </div>
 
-        <div className="-mx-5 overflow-x-auto sm:-mx-6">
+        <div className="space-y-2.5 md:hidden">
+          {tools.map((tool) => (
+            <div key={tool.name} className="rounded-xl bg-[#f4f3f1] p-3.5 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <span className="break-all font-mono font-semibold text-[#1a1c1a]">{tool.name}</span>
+                <Badge tone={riskTone(tool.riskLevel)}>{tool.riskLevel}</Badge>
+              </div>
+              <p className="mt-1.5 text-[#594139]">{tool.description}</p>
+              <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-[#5f5e5e]">
+                <span>Domain: {tool.domain}</span>
+                <span className={tool.policy === 'REQUIRE_APPROVAL' ? 'font-semibold text-[#ab3500]' : ''}>
+                  {tool.policy === 'REQUIRE_APPROVAL' ? 'MANDATORY SIGN-OFF' : 'AUTO_EXECUTE'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="-mx-5 hidden overflow-x-auto sm:-mx-6 md:block">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="bg-[#f4f3f1] font-mono text-[11px] uppercase tracking-wider text-[#5f5e5e]">

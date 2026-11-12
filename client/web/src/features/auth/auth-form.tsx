@@ -58,7 +58,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fafafa] px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center overflow-x-clip bg-[#faf9f6] px-4 py-8 sm:py-12">
       <div className="v3-grid-backdrop pointer-events-none fixed inset-0 z-0" />
       <div className="pointer-events-none absolute top-1/4 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-orange-500/10 blur-[120px]" />
 
