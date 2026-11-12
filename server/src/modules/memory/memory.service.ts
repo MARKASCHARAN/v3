@@ -1,4 +1,4 @@
-import { generateTextEmbedding } from '../../ai/providers/model.provider';
+import { generateTextEmbedding } from '../../ai/providers/embeddings';
 import { AppError } from '../../middleware/error.middleware';
 import { MemoryRepository } from './memory.repository';
 import {

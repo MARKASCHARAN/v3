@@ -27,9 +27,8 @@ Two migrations and initial Phase 2 A/B implementations already exist in the work
   - `server/src/modules/accountability/` — deterministic procrastination scoring (`scoreProcrastinationSignals`), adaptive intervention generation, deduplicated alerts.
   - `server/src/modules/research/` — `ResearchItem` persistence, SSRF-safe page fetcher (`isSafePublicHttpUrl`), HTML stripping, promote-to-memory workflow.
   - `server/src/modules/automation/` — `AiExecution` and `AiToolApproval` persistence, `/api/v1/automation/approvals/:id/approve|reject` human-in-the-loop execution lifecycle.
-- **Temporary Vercel AI SDK runtime to MIGRATE in Milestone `2.1`:**
-  - `server/src/ai/providers/model.provider.ts`, `server/src/ai/agents/assistant.agent.ts`, `server/src/ai/workflows/execution.workflow.ts`, `server/src/ai/tools/v3.tools.ts`, `server/src/modules/planning/planning.service.ts`, and `server/src/modules/research/research.service.ts` currently call Vercel AI SDK (`ai@^7.0.170`, `@ai-sdk/google@^4.0.118`).
-  - **Migration decision:** Replace `ai` and `@ai-sdk/google` cleanly with **LangChain.js + LangGraph.js + LangSmith** in Milestone `2.1` so there is strictly **one** agent/LLM orchestration runtime across the backend. Preserve the HTTP contracts and service methods so existing tests and web dashboard behavior remain intact.
+- **Vercel AI SDK runtime migrated in Milestone `2.1` (Completed):**
+  - `server/src/ai/providers/model-router.ts`, `server/src/ai/providers/embeddings.ts`, `server/src/ai/runtime/{state,checkpoints,graph-factory}.ts`, `server/src/ai/agents/assistant.agent.ts`, `server/src/ai/workflows/execution.workflow.ts`, `server/src/ai/tools/v3.tools.ts`, `server/src/modules/planning/planning.service.ts`, and `server/src/modules/research/research.service.ts` now run exclusively on **LangChain.js + LangGraph.js + LangSmith (`PostgresSaver` in `langgraph` schema)**, with `ai` and `@ai-sdk/google` removed.
 
 ---
 
@@ -466,13 +465,13 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 9. Milestone-by-Milestone Implementation Roadmap (`2.1`–`2.10`)
 
-### Milestone `2.1` — Agent Runtime Foundation
-- Install `@langchain/core`, `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/google-genai`, `langchain`, `langsmith`.
-- Implement `server/src/ai/providers/model-router.ts` and `embeddings.ts` replacing `ai` / `@ai-sdk/google`.
-- Implement `server/src/ai/runtime/state.ts` (`V3AgentStateAnnotation`) and `checkpoints.ts` (`PostgresSaver` in `langgraph` schema).
-- Add LangGraph `threadId`, `agentRole`, `tokenBudget`, `langsmithTraceId` columns to `AiExecution` via Prisma migration.
-- Port `planning.service.ts` and `research.service.ts` to `@langchain/google-genai`, remove `ai` and `@ai-sdk/google`.
-- Verify a first end-to-end LangGraph checkpointed run with LangSmith tracing toggle and unit tests.
+### Milestone `2.1` — Agent Runtime Foundation (Completed)
+- [x] Install `@langchain/core`, `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/google-genai`, `langchain`, `langsmith`.
+- [x] Implement `server/src/ai/providers/model-router.ts` and `embeddings.ts` replacing `ai` / `@ai-sdk/google`.
+- [x] Implement `server/src/ai/runtime/state.ts` (`V3AgentStateAnnotation`), `checkpoints.ts` (`PostgresSaver` in `langgraph` schema), and `graph-factory.ts`.
+- [x] Add LangGraph `threadId`, `agentRole`, `triggerType`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`, `checkpointNamespace` columns to `AiExecution` via Prisma migration (`20261112004243_add_langgraph_execution_fields`).
+- [x] Port `planning.service.ts`, `research.service.ts`, `memory.service.ts`, and `AssistantOrchestrator` to `@langchain/google-genai` + `@langchain/langgraph`, removing `ai` and `@ai-sdk/google`.
+- [x] Verify end-to-end LangGraph `PostgresSaver` checkpointed run against Supabase PostgreSQL + Gemini + Vitest suite.
 
 ### Milestone `2.2` — Tool & Permission Framework
 - Implement `server/src/permissions/risk-policy.ts` and `permission-guard.ts` enforcing the 5 risk levels (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`).
@@ -524,6 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Commit the completed deterministic Phase 2 B work (`pgvector` memory, adaptive accountability, research module, `AiExecution` / `AiToolApproval` tables, updated docs) so `main` has a clean checkpoint.
-2. Begin **Milestone `2.1` (Agent Runtime Foundation)** by installing LangChain/LangGraph/LangSmith dependencies and wiring `PostgresSaver` + `model-router.ts`.
+1. Begin **Milestone `2.2` (Tool & Permission Framework)** by adding `server/src/permissions/risk-policy.ts` and `permission-guard.ts` with all 5 risk levels (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`), `V3ToolContract`, and LangGraph `interrupt()` / `Command({ resume })` integration.
 

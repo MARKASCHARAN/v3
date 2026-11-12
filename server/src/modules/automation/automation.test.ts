@@ -99,11 +99,13 @@ describe('Phase 2 AI & Automation Module', () => {
       };
 
       const executor: WorkflowExecutor = async (input) => {
-        const createTaskTool = input.tools.createTask;
-        const toolResponse = await createTaskTool!.execute!(
-          { title: 'Draft Phase 2 docs', priority: 'HIGH' },
-          { toolCallId: 'tc-1', messages: input.messages, context: undefined }
-        );
+        const createTaskTool = input.tools.find((entry) => entry.name === 'createTask');
+        expect(createTaskTool).toBeDefined();
+        const toolResponseRaw = await createTaskTool!.invoke({
+          title: 'Draft Phase 2 docs',
+          priority: 'HIGH',
+        });
+        const toolResponse = JSON.parse(String(toolResponseRaw)) as Record<string, unknown>;
         expect(toolResponse).toMatchObject({
           status: 'APPROVAL_REQUIRED',
           approvalId: 'approval-1',
@@ -114,6 +116,8 @@ describe('Phase 2 AI & Automation Module', () => {
           model: 'gemini-2.5-flash',
           text: 'Queued task creation for your approval.',
           attempts: 1,
+          tokensUsed: 120,
+          checkpointThreadId: input.threadId,
           steps: [],
         };
       };
@@ -125,9 +129,19 @@ describe('Phase 2 AI & Automation Module', () => {
         sessionId: 'default',
         maxSteps: 5,
         allowAutoApproveWrites: false,
-      })) as { status: string; responseText: string };
+      })) as { status: string; responseText: string; tokensUsed: number };
 
       expect(result.status).toBe('AWAITING_APPROVAL');
+      expect(result.tokensUsed).toBe(120);
+      expect(persistence.createExecution).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          sessionId: 'default',
+          agentRole: 'MAIN_ORCHESTRATOR',
+          triggerType: 'REQUEST',
+          threadId: expect.stringContaining('default:'),
+        })
+      );
       expect(persistence.createPendingApproval).toHaveBeenCalledOnce();
       expect(persistence.saveConversationMessage).toHaveBeenCalledTimes(2);
     });

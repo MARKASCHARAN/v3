@@ -1,10 +1,11 @@
-import { Output, generateText } from 'ai';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
   PLANNING_SYSTEM_PROMPT,
   PlanningPromptInput,
   buildGoalDecompositionPrompt,
 } from '../../ai/prompts/planning.prompt';
-import { getDefaultLanguageModel } from '../../ai/providers/model.provider';
+import { getChatModelForTier } from '../../ai/providers/model-router';
+import { withAiRetry } from '../../ai/workflows/retry.workflow';
 import { AppError } from '../../middleware/error.middleware';
 import { PlanningRepository } from './planning.repository';
 import {
@@ -23,26 +24,25 @@ import {
 
 export class AiPlanGenerator implements PlanGenerator {
   async decomposeGoal(input: PlanningPromptInput): Promise<PlanGeneratorResult> {
-    const descriptor = getDefaultLanguageModel();
+    const descriptor = getChatModelForTier('PLANNING');
     const prompt = buildGoalDecompositionPrompt(input);
-
-    const result = await generateText({
-      model: descriptor.model,
-      system: PLANNING_SYSTEM_PROMPT,
-      prompt,
-      output: Output.object({
-        schema: generatedPlanOutputSchema,
-      }),
+    const structuredModel = descriptor.model.withStructuredOutput(generatedPlanOutputSchema, {
+      name: 'GoalPlan',
     });
 
-    if (!result.output) {
+    const { result } = await withAiRetry(() =>
+      structuredModel.invoke([new SystemMessage(PLANNING_SYSTEM_PROMPT), new HumanMessage(prompt)])
+    );
+
+    const parsed = generatedPlanOutputSchema.safeParse(result);
+    if (!parsed.success) {
       throw new AppError(502, 'AI planner did not produce a valid plan', 'AI_GENERATION_FAILED');
     }
 
     return {
       provider: descriptor.provider,
       model: descriptor.modelId,
-      plan: result.output,
+      plan: parsed.data,
     };
   }
 }

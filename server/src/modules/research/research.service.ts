@@ -1,5 +1,9 @@
-import { Output, generateText } from 'ai';
-import { createGoogleSearchTool, resolveLanguageModel } from '../../ai/providers/model.provider';
+import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
+import {
+  createGoogleSearchTool,
+  extractTextContent,
+  getChatModelForTier,
+} from '../../ai/providers/model-router';
 import { withAiRetry } from '../../ai/workflows/retry.workflow';
 import { AppError } from '../../middleware/error.middleware';
 import { MemoryService } from '../memory/memory.service';
@@ -25,6 +29,17 @@ const PRIVATE_IP_PATTERNS = [
   /^::1$/,
   /^172\.(1[6-9]|2\d|3[0-1])\./,
 ];
+
+interface GeminiGroundingChunk {
+  web?: {
+    uri?: string;
+    title?: string;
+  };
+}
+
+interface GeminiGroundingMetadata {
+  groundingChunks?: GeminiGroundingChunk[];
+}
 
 export const isSafePublicHttpUrl = (rawUrl: string): boolean => {
   try {
@@ -53,6 +68,27 @@ const extractTitleFromHtml = (html: string): string | undefined => {
   const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const rawTitle = match?.[1]?.replace(/\s+/g, ' ').trim();
   return rawTitle || undefined;
+};
+
+const extractGroundingSources = (message: AIMessage): ResearchSource[] => {
+  const rawMetadata = (message.response_metadata?.groundingMetadata ??
+    message.additional_kwargs?.groundingMetadata) as GeminiGroundingMetadata | undefined;
+
+  if (!rawMetadata?.groundingChunks || !Array.isArray(rawMetadata.groundingChunks)) {
+    return [];
+  }
+
+  const sources: ResearchSource[] = [];
+  for (const chunk of rawMetadata.groundingChunks) {
+    const uri = chunk.web?.uri;
+    if (typeof uri === 'string' && uri.length > 0) {
+      sources.push({
+        url: uri,
+        title: chunk.web?.title,
+      });
+    }
+  }
+  return sources;
 };
 
 export const fetchSafePageExcerpts = async (urls: string[]): Promise<FetchedPageExcerpt[]> => {
@@ -93,7 +129,7 @@ export class AiWebResearchRunner implements WebResearchRunner {
     query: string;
     pageExcerpts: FetchedPageExcerpt[];
   }): Promise<WebResearchExecutionResult> {
-    const descriptor = resolveLanguageModel();
+    const descriptor = getChatModelForTier('RESEARCH');
     const googleSearch = createGoogleSearchTool();
 
     const excerptsSection =
@@ -103,31 +139,32 @@ export class AiWebResearchRunner implements WebResearchRunner {
             .join('\n\n')}`
         : '';
 
+    const groundedModel = descriptor.model.bindTools([googleSearch]);
     const { result: grounded } = await withAiRetry(() =>
-      generateText({
-        model: descriptor.model,
-        system:
-          'You are V3 Research Assistant. Use Google Search grounding and any provided web excerpts to gather accurate, up-to-date facts and citations.',
-        prompt: `Research Query: ${input.query}${excerptsSection}`,
-        tools: {
-          google_search: googleSearch,
-        },
-      })
+      groundedModel.invoke([
+        new SystemMessage(
+          'You are V3 Research Assistant. Use Google Search grounding and any provided web excerpts to gather accurate, up-to-date facts and citations.'
+        ),
+        new HumanMessage(`Research Query: ${input.query}${excerptsSection}`),
+      ])
     );
+
+    const groundedText = extractTextContent(grounded.content);
+    const structuredModel = descriptor.model.withStructuredOutput(synthesizedResearchOutputSchema, {
+      name: 'ResearchSynthesis',
+    });
 
     const { result: synthesized } = await withAiRetry(() =>
-      generateText({
-        model: descriptor.model,
-        system:
-          'Synthesize the provided research findings into a concise title, comprehensive summary, and bullet-free keyFindings array.',
-        prompt: `Query: ${input.query}\n\nFindings:\n${grounded.text}`,
-        output: Output.object({
-          schema: synthesizedResearchOutputSchema,
-        }),
-      })
+      structuredModel.invoke([
+        new SystemMessage(
+          'Synthesize the provided research findings into a concise title, comprehensive summary, and bullet-free keyFindings array.'
+        ),
+        new HumanMessage(`Query: ${input.query}\n\nFindings:\n${groundedText}`),
+      ])
     );
 
-    if (!synthesized.output) {
+    const parsed = synthesizedResearchOutputSchema.safeParse(synthesized);
+    if (!parsed.success) {
       throw new AppError(502, 'AI research synthesis failed', 'AI_GENERATION_FAILED');
     }
 
@@ -139,21 +176,18 @@ export class AiWebResearchRunner implements WebResearchRunner {
         snippet: page.excerpt.slice(0, 240),
       });
     }
-    for (const source of grounded.sources) {
-      if (source.sourceType === 'url' && !dedupedSources.has(source.url)) {
-        dedupedSources.set(source.url, {
-          url: source.url,
-          title: source.title,
-        });
+    for (const source of extractGroundingSources(grounded)) {
+      if (!dedupedSources.has(source.url)) {
+        dedupedSources.set(source.url, source);
       }
     }
 
     return {
       provider: descriptor.provider,
       model: descriptor.modelId,
-      title: synthesized.output.title,
-      summary: synthesized.output.summary,
-      keyFindings: synthesized.output.keyFindings,
+      title: parsed.data.title,
+      summary: parsed.data.summary,
+      keyFindings: parsed.data.keyFindings,
       sources: [...dedupedSources.values()],
     };
   }

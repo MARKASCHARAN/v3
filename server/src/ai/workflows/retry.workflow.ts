@@ -1,4 +1,3 @@
-import { APICallError } from 'ai';
 import { AppError } from '../../middleware/error.middleware';
 
 export interface RetryOptions {
@@ -14,16 +13,35 @@ export interface RetryResult<T> {
 
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
+const extractStatusCode = (error: unknown): number | undefined => {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const record = error as Record<string, unknown>;
+  if (typeof record.statusCode === 'number') {
+    return record.statusCode;
+  }
+  if (typeof record.status === 'number') {
+    return record.status;
+  }
+  if (record.response && typeof record.response === 'object') {
+    const responseRecord = record.response as Record<string, unknown>;
+    if (typeof responseRecord.status === 'number') {
+      return responseRecord.status;
+    }
+  }
+  return undefined;
+};
+
 export const isTransientAiError = (error: unknown): boolean => {
   if (error instanceof AppError) {
     return error.statusCode >= 500 && error.code !== 'AI_PROVIDER_UNCONFIGURED';
   }
 
-  if (APICallError.isInstance(error)) {
-    if (error.isRetryable) {
-      return true;
-    }
-    return error.statusCode !== undefined && TRANSIENT_STATUS_CODES.has(error.statusCode);
+  const statusCode = extractStatusCode(error);
+  if (statusCode !== undefined && TRANSIENT_STATUS_CODES.has(statusCode)) {
+    return true;
   }
 
   if (error instanceof Error) {
@@ -33,6 +51,10 @@ export const isTransientAiError = (error: unknown): boolean => {
       msg.includes('econnreset') ||
       msg.includes('etimedout') ||
       msg.includes('rate limit') ||
+      msg.includes('429') ||
+      msg.includes('503') ||
+      msg.includes('resource exhausted') ||
+      msg.includes('overloaded') ||
       msg.includes('temporarily unavailable')
     );
   }

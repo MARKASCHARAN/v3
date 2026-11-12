@@ -6,6 +6,7 @@ export interface V3ToolDefinition<TSchema extends z.ZodType = z.ZodType> {
   description: string;
   policy: ToolPermissionPolicy;
   inputSchema: TSchema;
+  toolSchema?: z.ZodType;
   execute: (userId: string, args: z.infer<TSchema>) => Promise<unknown>;
 }
 

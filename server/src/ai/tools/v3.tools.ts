@@ -1,28 +1,37 @@
-import { ToolSet, tool } from 'ai';
+import { StructuredToolInterface, tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { AppError } from '../../middleware/error.middleware';
 import { AccountabilityService } from '../../modules/accountability/accountability.service';
+import {
+  createGoalSchema,
+  goalStatusSchema,
+  goalTimeframeSchema,
+  goalsQuerySchema,
+} from '../../modules/goals/goals.schema';
 import { GoalsService } from '../../modules/goals/goals.service';
-import { createGoalSchema, goalsQuerySchema } from '../../modules/goals/goals.schema';
-import { MemoryService } from '../../modules/memory/memory.service';
 import {
   createMemorySchema,
+  memoryCategorySchema,
   memoryQuerySchema,
   semanticSearchQuerySchema,
 } from '../../modules/memory/memory.schema';
+import { MemoryService } from '../../modules/memory/memory.service';
 import { ResearchService } from '../../modules/research/research.service';
 import { conductResearchSchema } from '../../modules/research/research.schema';
-import { SchedulingService } from '../../modules/scheduling/scheduling.service';
 import {
   createTimeBlockSchema,
   schedulingQuerySchema,
+  timeBlockCategorySchema,
+  timeBlockStatusSchema,
 } from '../../modules/scheduling/scheduling.schema';
-import { TasksService } from '../../modules/tasks/tasks.service';
+import { SchedulingService } from '../../modules/scheduling/scheduling.service';
 import {
   createTaskSchema,
+  taskPrioritySchema,
   taskStatusSchema,
   tasksQuerySchema,
 } from '../../modules/tasks/tasks.schema';
+import { TasksService } from '../../modules/tasks/tasks.service';
 import { PendingToolApprovalRequest, V3ToolDefinition } from './tool.types';
 
 const goalsService = new GoalsService();
@@ -43,11 +52,79 @@ const updateTaskStatusArgsSchema = z.object({
 
 const emptyArgsSchema = z.object({});
 
+const getScheduleToolSchema = z.object({
+  from: z.string().describe('ISO 8601 start datetime filter').optional(),
+  to: z.string().describe('ISO 8601 end datetime filter').optional(),
+  category: timeBlockCategorySchema.optional(),
+  status: timeBlockStatusSchema.optional(),
+  taskId: z.string().uuid().optional(),
+  goalId: z.string().uuid().optional(),
+});
+
+const createGoalToolSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2000).optional(),
+  category: z.string().trim().min(1).max(100).default('GENERAL'),
+  timeframe: goalTimeframeSchema.default('YEARLY'),
+  targetYear: z.number().int().min(2000).max(2100).optional(),
+  parentGoalId: z.string().uuid().optional(),
+  targetDate: z.string().describe('ISO 8601 target datetime').optional(),
+  status: goalStatusSchema.optional(),
+  progress: z.number().int().min(0).max(100).optional(),
+});
+
+const createTaskToolSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(4000).optional(),
+  priority: taskPrioritySchema.default('MEDIUM'),
+  status: taskStatusSchema.default('TODO'),
+  dueDate: z.string().describe('ISO 8601 due datetime').optional(),
+  goalId: z.string().uuid().optional(),
+  milestoneId: z.string().uuid().optional(),
+  parentTaskId: z.string().uuid().optional(),
+});
+
+const createTimeBlockToolSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(2000).optional(),
+  startTime: z.string().describe('ISO 8601 start datetime'),
+  endTime: z.string().describe('ISO 8601 end datetime'),
+  category: timeBlockCategorySchema.default('WORK'),
+  status: timeBlockStatusSchema.default('SCHEDULED'),
+  taskId: z.string().uuid().optional(),
+  goalId: z.string().uuid().optional(),
+  isRecurring: z.boolean().default(false),
+  recurrenceRule: z.string().trim().max(200).optional(),
+  allowOverlap: z.boolean().default(false),
+});
+
+const listGoalsToolSchema = z.object({
+  timeframe: goalTimeframeSchema.optional(),
+  targetYear: z.number().int().min(2000).max(2100).optional(),
+  status: goalStatusSchema.optional(),
+  parentGoalId: z.string().optional(),
+});
+
+const searchMemoryToolSchema = z.object({
+  category: memoryCategorySchema.optional(),
+  q: z.string().trim().min(1).max(200).optional(),
+  tag: z.string().trim().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(100).default(50),
+});
+
+const semanticSearchMemoryToolSchema = z.object({
+  q: z.string().trim().min(1).max(1000),
+  category: memoryCategorySchema.optional(),
+  limit: z.number().int().min(1).max(50).default(10),
+  minSimilarity: z.number().min(0).max(1).default(0.3),
+});
+
 export const V3_TOOL_REGISTRY: Record<string, V3ToolDefinition<z.ZodType>> = {
   listGoals: defineTool({
     description: 'List user goals with optional timeframe, targetYear, or status filters.',
     policy: 'AUTO_EXECUTE',
     inputSchema: goalsQuerySchema,
+    toolSchema: listGoalsToolSchema,
     execute: (userId, args) => goalsService.getGoals(userId, args),
   }),
   listTasks: defineTool({
@@ -60,6 +137,7 @@ export const V3_TOOL_REGISTRY: Record<string, V3ToolDefinition<z.ZodType>> = {
     description: 'Retrieve user calendar time blocks within an optional date range.',
     policy: 'AUTO_EXECUTE',
     inputSchema: schedulingQuerySchema,
+    toolSchema: getScheduleToolSchema,
     execute: (userId, args) => schedulingService.getTimeBlocks(userId, args),
   }),
   getAccountabilitySummary: defineTool({
@@ -72,12 +150,14 @@ export const V3_TOOL_REGISTRY: Record<string, V3ToolDefinition<z.ZodType>> = {
     description: 'Search stored memories and project context notes by query or category.',
     policy: 'AUTO_EXECUTE',
     inputSchema: memoryQuerySchema,
+    toolSchema: searchMemoryToolSchema,
     execute: (userId, args) => memoryService.getMemories(userId, args),
   }),
   semanticSearchMemory: defineTool({
     description: 'Semantically search long-term memories using pgvector similarity.',
     policy: 'AUTO_EXECUTE',
     inputSchema: semanticSearchQuerySchema,
+    toolSchema: semanticSearchMemoryToolSchema,
     execute: (userId, args) => memoryService.semanticSearch(userId, args),
   }),
   analyzeProcrastination: defineTool({
@@ -96,12 +176,14 @@ export const V3_TOOL_REGISTRY: Record<string, V3ToolDefinition<z.ZodType>> = {
     description: 'Create a new personal or yearly goal for the user.',
     policy: 'REQUIRE_APPROVAL',
     inputSchema: createGoalSchema,
+    toolSchema: createGoalToolSchema,
     execute: (userId, args) => goalsService.createGoal(userId, args),
   }),
   createTask: defineTool({
     description: 'Create a new task or subtask with priority and optional deadline.',
     policy: 'REQUIRE_APPROVAL',
     inputSchema: createTaskSchema,
+    toolSchema: createTaskToolSchema,
     execute: (userId, args) => tasksService.createTask(userId, args),
   }),
   updateTaskStatus: defineTool({
@@ -115,6 +197,7 @@ export const V3_TOOL_REGISTRY: Record<string, V3ToolDefinition<z.ZodType>> = {
     description: 'Schedule a calendar time block for focused work or an event.',
     policy: 'REQUIRE_APPROVAL',
     inputSchema: createTimeBlockSchema,
+    toolSchema: createTimeBlockToolSchema,
     execute: (userId, args) => schedulingService.createTimeBlock(userId, args),
   }),
   saveMemory: defineTool({
@@ -143,18 +226,17 @@ export const executeRegisteredTool = async (
   return entry.execute(userId, parsedArgs);
 };
 
-export const buildAiSdkToolSet = (params: {
+export const buildLangChainTools = (params: {
   userId: string;
   allowAutoApproveWrites: boolean;
   onPendingApproval: (request: PendingToolApprovalRequest) => Promise<string>;
-}): ToolSet => {
-  const tools: ToolSet = {};
+}): StructuredToolInterface[] => {
+  const tools: StructuredToolInterface[] = [];
 
   for (const [toolName, definition] of Object.entries(V3_TOOL_REGISTRY)) {
-    tools[toolName] = tool({
-      description: definition.description,
-      inputSchema: definition.inputSchema,
-      execute: async (rawArgs) => {
+    const schema = definition.toolSchema ?? definition.inputSchema;
+    const lcTool = tool(
+      async (rawArgs) => {
         const parsedArgs = definition.inputSchema.parse(rawArgs);
 
         if (definition.policy === 'REQUIRE_APPROVAL' && !params.allowAutoApproveWrites) {
@@ -162,22 +244,29 @@ export const buildAiSdkToolSet = (params: {
             toolName,
             toolArgs: parsedArgs as Record<string, unknown>,
           });
-          return {
+          return JSON.stringify({
             status: 'APPROVAL_REQUIRED',
             approvalId,
             toolName,
             message: `Action "${toolName}" requires human approval before execution.`,
-          };
+          });
         }
 
         const result = await definition.execute(params.userId, parsedArgs);
-        return {
+        return JSON.stringify({
           status: 'EXECUTED',
           toolName,
           data: result,
-        };
+        });
       },
-    });
+      {
+        name: toolName,
+        description: definition.description,
+        schema: schema as z.ZodObject<z.ZodRawShape>,
+      }
+    );
+
+    tools.push(lcTool);
   }
 
   return tools;

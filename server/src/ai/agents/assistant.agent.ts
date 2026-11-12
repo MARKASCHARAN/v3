@@ -1,10 +1,14 @@
-import { ModelMessage, ToolSet } from 'ai';
+import { randomUUID } from 'node:crypto';
+import { AIMessage, BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { StructuredToolInterface } from '@langchain/core/tools';
 import { Prisma } from '@prisma/client';
+import { aiConfig, configureLangSmithRuntime } from '../../config/ai.config';
 import { prisma } from '../../database/prisma';
 import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
-import { AiProviderName, resolveLanguageModel } from '../providers/model.provider';
+import { AiProviderName, resolveChatModel } from '../providers/model-router';
+import { AgentRole } from '../runtime/state';
 import { ExecutionStepTrace, PendingToolApprovalRequest } from '../tools/tool.types';
-import { buildAiSdkToolSet } from '../tools/v3.tools';
+import { buildLangChainTools } from '../tools/v3.tools';
 import { MultiStepWorkflowOutput, runMultiStepToolWorkflow } from '../workflows/execution.workflow';
 
 export interface RunAssistantWorkflowParams {
@@ -21,15 +25,26 @@ export type WorkflowExecutor = (input: {
   provider?: AiProviderName;
   modelId?: string;
   system: string;
-  messages: ModelMessage[];
-  tools: ToolSet;
+  messages: BaseMessage[];
+  tools: StructuredToolInterface[];
   maxSteps: number;
-}) => Promise<MultiStepWorkflowOutput & { provider: string; model: string }>;
+  threadId: string;
+  executionId: string;
+  userId: string;
+  sessionId: string;
+  objective: string;
+  agentRole: AgentRole;
+  tokenBudget: number;
+  langsmithTraceId?: string;
+}) => Promise<
+  MultiStepWorkflowOutput & { provider: string; model: string; langsmithTraceId?: string }
+>;
 
 const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
-  const descriptor = resolveLanguageModel({
+  const descriptor = resolveChatModel({
     provider: input.provider,
     modelId: input.modelId,
+    tier: 'ORCHESTRATION',
   });
 
   const output = await runMultiStepToolWorkflow({
@@ -38,12 +53,21 @@ const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
     messages: input.messages,
     tools: input.tools,
     maxSteps: input.maxSteps,
+    threadId: input.threadId,
+    executionId: input.executionId,
+    userId: input.userId,
+    sessionId: input.sessionId,
+    objective: input.objective,
+    agentRole: input.agentRole,
+    tokenBudget: input.tokenBudget,
+    runId: input.langsmithTraceId,
   });
 
   return {
     ...output,
     provider: descriptor.provider,
     model: descriptor.modelId,
+    langsmithTraceId: input.langsmithTraceId,
   };
 };
 
@@ -61,6 +85,11 @@ export interface OrchestratorPersistence {
   createExecution(data: {
     userId: string;
     sessionId: string;
+    threadId: string;
+    agentRole: AgentRole;
+    triggerType: string;
+    tokenBudget: number;
+    langsmithTraceId?: string;
     prompt: string;
     provider?: string;
     model?: string;
@@ -86,6 +115,8 @@ export interface OrchestratorPersistence {
       responseText?: string;
       errorMessage?: string;
       attempts?: number;
+      tokensUsed?: number;
+      langsmithTraceId?: string;
       stepsData?: ExecutionStepTrace[];
     }
   ): Promise<unknown>;
@@ -139,6 +170,11 @@ const prismaPersistence: OrchestratorPersistence = {
       data: {
         userId: data.userId,
         sessionId: data.sessionId,
+        threadId: data.threadId,
+        agentRole: data.agentRole,
+        triggerType: data.triggerType,
+        tokenBudget: data.tokenBudget,
+        langsmithTraceId: data.langsmithTraceId,
         prompt: data.prompt,
         status: 'RUNNING',
         provider: data.provider,
@@ -182,6 +218,8 @@ const prismaPersistence: OrchestratorPersistence = {
         responseText: data.responseText,
         errorMessage: data.errorMessage,
         attempts: data.attempts,
+        tokensUsed: data.tokensUsed,
+        langsmithTraceId: data.langsmithTraceId,
         stepsData: data.stepsData as unknown as Prisma.InputJsonValue | undefined,
         completedAt: new Date(),
       },
@@ -201,10 +239,21 @@ export class AssistantOrchestrator {
   ) {}
 
   async run(params: RunAssistantWorkflowParams) {
+    const langsmithEnabled = configureLangSmithRuntime();
+    const threadId = `${params.sessionId}:${randomUUID()}`;
+    const agentRole: AgentRole = 'MAIN_ORCHESTRATOR';
+    const tokenBudget = aiConfig.defaultTokenBudget;
+    const langsmithTraceId = langsmithEnabled ? randomUUID() : undefined;
+
     const context = await this.persistence.loadContext(params.userId, params.sessionId);
     const execution = await this.persistence.createExecution({
       userId: params.userId,
       sessionId: params.sessionId,
+      threadId,
+      agentRole,
+      triggerType: 'REQUEST',
+      tokenBudget,
+      langsmithTraceId,
       prompt: params.prompt,
       provider: params.provider,
       model: params.modelId,
@@ -224,18 +273,17 @@ export class AssistantOrchestrator {
       pendingRemindersCount: context.pendingRemindersCount,
     });
 
-    const historyMessages: ModelMessage[] = context.recentMessages
+    const historyMessages: BaseMessage[] = context.recentMessages
       .filter((msg) => msg.role === 'USER' || msg.role === 'ASSISTANT')
-      .map((msg) => ({
-        role: msg.role === 'USER' ? 'user' : 'assistant',
-        content: msg.content,
-      }));
+      .map((msg) =>
+        msg.role === 'USER' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
+      );
 
-    const messages: ModelMessage[] = [...historyMessages, { role: 'user', content: params.prompt }];
+    const messages: BaseMessage[] = [...historyMessages, new HumanMessage(params.prompt)];
 
     let pendingApprovalsCount = 0;
 
-    const tools = buildAiSdkToolSet({
+    const tools = buildLangChainTools({
       userId: params.userId,
       allowAutoApproveWrites: params.allowAutoApproveWrites,
       onPendingApproval: async (request: PendingToolApprovalRequest) => {
@@ -258,6 +306,14 @@ export class AssistantOrchestrator {
         messages,
         tools,
         maxSteps: params.maxSteps,
+        threadId,
+        executionId: execution.id,
+        userId: params.userId,
+        sessionId: params.sessionId,
+        objective: params.prompt,
+        agentRole,
+        tokenBudget,
+        langsmithTraceId,
       });
 
       const status = pendingApprovalsCount > 0 ? 'AWAITING_APPROVAL' : 'COMPLETED';
@@ -280,6 +336,8 @@ export class AssistantOrchestrator {
         model: output.model,
         responseText,
         attempts: output.attempts,
+        tokensUsed: output.tokensUsed,
+        langsmithTraceId: output.langsmithTraceId ?? langsmithTraceId,
         stepsData: output.steps,
       });
     } catch (error) {

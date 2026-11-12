@@ -50,7 +50,7 @@ Additional ideas numbered 13+ (daily briefing, opportunity radar, career agent, 
 | Validation | Zod | API request and data validation |
 | API documentation | OpenAPI / Swagger | REST endpoint documentation |
 | Authentication | Supabase Auth | User authentication |
-| AI integration | LangChain.js (migrating from initial Vercel AI SDK in M2.1) | Model routing, prompts, and structured tools |
+| AI integration | LangChain.js + `@langchain/google-genai` | Model routing, prompts, embeddings, and structured tools |
 | Agent orchestration | LangGraph.js + Deep Agents (selective) + LangSmith | Stateful agent runtime, checkpoints, and tracing |
 | External tool protocol | Model Context Protocol (MCP) | Standardized external tool connectivity |
 | Memory search | PostgreSQL + pgvector | Hybrid SQL, keyword, and semantic retrieval |
