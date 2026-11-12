@@ -484,11 +484,11 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Integrate `AssistantOrchestrator` HTTP interface (`/api/v1/automation/run`) cleanly with `orchestrator.ts`, optional thread continuation, and checkpoint resume.
 - [x] Add token budget guard (`BUDGET_EXCEEDED`), max-iteration/consecutive-error circuit breaker (`CIRCUIT_BREAKER`), and fallback summary generation.
 
-### Milestone `2.4` — Specialist Agents
-- Implement subgraph/specialist modules in `server/src/ai/agents/`:
+### Milestone `2.4` — Specialist Agents (Completed)
+- [x] Implement subgraph/specialist modules in `server/src/ai/agents/` via [`specialist.factory.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/agents/specialist.factory.ts) and [`specialist.registry.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/agents/specialist.registry.ts):
   - Phase A core specialists: `goal-planning`, `task`, `scheduling`, `research`, `memory`, `accountability`.
-  - Phase B specialists (once M2.8 tools land): `communication`, `developer`, `automation`.
-- Assign each specialist a scoped `AgentPermissionProfile` and distinct prompt template.
+  - Phase B specialists: `communication`, `developer` (with `AUTOMATION` handled by `AssistantOrchestrator` / `AGENT_PERMISSION_PROFILES`).
+- [x] Assign each specialist a scoped `AgentPermissionProfile` and distinct prompt template in [`prompt.registry.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/prompts/prompt.registry.ts), plus `delegateToSpecialist` orchestration tool and `GET /api/v1/automation/agents`.
 
 ### Milestone `2.5` — Hybrid Data & Memory
 - Narrow `memories.embedding` to `vector(768)` and add HNSW cosine + PostgreSQL GIN full-text indexes via Prisma SQL migration.
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.4` (Specialist Agents)** by creating scoped specialist agent modules under `server/src/ai/agents/` (`goal-planning`, `task`, `scheduling`, `research`, `memory`, `accountability`) bound to their respective `AgentPermissionProfile` and prompt templates.
+1. Begin **Milestone `2.5` (Hybrid Data & Memory)** by narrowing `memories.embedding` to `vector(768)` with HNSW cosine + PostgreSQL GIN full-text indexes, adding lifecycle fields (`memoryType`, `sourceType`, `confidence`, `expiresAt`, `supersededById`), and implementing `server/src/ai/memory/{hybrid-retrieval,extraction,consolidation}.ts`.
 

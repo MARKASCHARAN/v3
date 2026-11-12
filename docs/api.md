@@ -168,8 +168,9 @@ Defined in `server/src/modules/memory/memory.routes.ts` and mounted on `v1Router
 
 Defined in `server/src/modules/automation/automation.routes.ts` and mounted on `v1Router`:
 
-- `GET /api/v1/automation/tools` — List registered AI tools and permission policies (`AUTO_EXECUTE` vs `REQUIRE_APPROVAL`)
-- `POST /api/v1/automation/run` — Run the central AI orchestrator with conversation context, multi-step tool calling, retries, and approval gating
+- `GET /api/v1/automation/tools` — List registered AI tools and risk policies (`READ`, `INTERNAL_WRITE`, etc.)
+- `GET /api/v1/automation/agents` — List registered specialist AI agents, model tiers, and scoped `AgentPermissionProfile` metadata
+- `POST /api/v1/automation/run` — Run the central AI orchestrator or a targeted specialist (`agentRole`, optional `threadId`/`tokenBudget`) with multi-step tool calling, retries, and approval gating
 - `GET /api/v1/automation/executions` — List AI execution history (`status`, `sessionId`, `limit` filters)
 - `GET /api/v1/automation/executions/:id` — Retrieve a single AI execution with step traces and approvals
 - `GET /api/v1/automation/approvals` — List tool approval requests (`status`, `executionId`, `limit` filters)

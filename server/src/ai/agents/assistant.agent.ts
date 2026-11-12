@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import { aiConfig, configureLangSmithRuntime } from '../../config/ai.config';
 import { prisma } from '../../database/prisma';
 import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
-import { AiProviderName, resolveChatModel } from '../providers/model-router';
+import { AiProviderName, ModelTaskTier, resolveChatModel } from '../providers/model-router';
 import { ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import { GraphApprovalPolicy } from '../runtime/graph-factory';
 import { ContextLoaderFn } from '../runtime/orchestrator';
@@ -22,12 +22,18 @@ import {
   resumeInterruptedToolWorkflow,
   runMultiStepToolWorkflow,
 } from '../workflows/execution.workflow';
+import {
+  buildSpecialistDelegationTool,
+  getSpecialistAgent,
+  isSpecialistRole,
+} from './specialist.registry';
 
 export interface RunAssistantWorkflowParams {
   userId: string;
   prompt: string;
   sessionId: string;
   threadId?: string;
+  agentRole?: AgentRole;
   tokenBudget?: number;
   provider?: AiProviderName;
   modelId?: string;
@@ -38,6 +44,7 @@ export interface RunAssistantWorkflowParams {
 export type WorkflowExecutor = (input: {
   provider?: AiProviderName;
   modelId?: string;
+  modelTier?: ModelTaskTier;
   system: string;
   messages: BaseMessage[];
   tools: StructuredToolInterface[];
@@ -60,7 +67,7 @@ const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
   const descriptor = resolveChatModel({
     provider: input.provider,
     modelId: input.modelId,
-    tier: 'ORCHESTRATION',
+    tier: input.modelTier ?? 'ORCHESTRATION',
   });
 
   const output = await runMultiStepToolWorkflow({
@@ -304,8 +311,13 @@ export class AssistantOrchestrator {
     const langsmithEnabled = configureLangSmithRuntime();
     const isThreadContinuation = Boolean(params.threadId?.trim());
     const threadId = params.threadId?.trim() || `${params.sessionId}:${randomUUID()}`;
-    const agentRole: AgentRole = 'MAIN_ORCHESTRATOR';
-    const tokenBudget = params.tokenBudget ?? aiConfig.defaultTokenBudget;
+    const agentRole: AgentRole = params.agentRole ?? 'MAIN_ORCHESTRATOR';
+    const specialist = isSpecialistRole(agentRole) ? getSpecialistAgent(agentRole) : null;
+    const tokenBudget =
+      params.tokenBudget ?? specialist?.profile.maxTokenBudget ?? aiConfig.defaultTokenBudget;
+    const effectiveMaxSteps = specialist
+      ? Math.min(params.maxSteps, specialist.profile.maxIterations)
+      : params.maxSteps;
     const langsmithTraceId = langsmithEnabled ? randomUUID() : undefined;
 
     const context = await this.persistence.loadContext(params.userId, params.sessionId);
@@ -334,6 +346,7 @@ export class AssistantOrchestrator {
       memories: context.memories,
       overdueTasksCount: context.overdueTasksCount,
       pendingRemindersCount: context.pendingRemindersCount,
+      basePrompt: specialist?.systemPrompt,
     });
 
     const historyMessages: BaseMessage[] = isThreadContinuation
@@ -363,7 +376,7 @@ export class AssistantOrchestrator {
       return approval;
     };
 
-    const tools = buildLangChainTools({
+    const baseTools = buildLangChainTools({
       userId: params.userId,
       executionId: execution.id,
       agentRole,
@@ -376,14 +389,30 @@ export class AssistantOrchestrator {
 
     const contextLoader: ContextLoaderFn = async () => mapLoadedContextToSlice(context);
 
+    const tools = specialist
+      ? baseTools
+      : [
+          ...baseTools,
+          buildSpecialistDelegationTool({
+            userId: params.userId,
+            executionId: execution.id,
+            parentThreadId: threadId,
+            sessionId: params.sessionId,
+            allowAutoApproveWrites: params.allowAutoApproveWrites,
+            onPendingApproval: createApprovalRecord,
+            contextLoader,
+          }),
+        ];
+
     try {
       const output = await this.workflowExecutor({
         provider: params.provider,
         modelId: params.modelId,
+        ...(specialist ? { modelTier: specialist.definition.modelTier } : {}),
         system,
         messages,
         tools,
-        maxSteps: params.maxSteps,
+        maxSteps: effectiveMaxSteps,
         threadId,
         executionId: execution.id,
         userId: params.userId,

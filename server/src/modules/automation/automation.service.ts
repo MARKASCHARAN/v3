@@ -1,6 +1,7 @@
 import { AssistantOrchestrator } from '../../ai/agents/assistant.agent';
 import { AiProviderName } from '../../ai/providers/model-router';
 import { AgentRole } from '../../ai/runtime/state';
+import { listSpecialistAgentsMetadata } from '../../ai/agents/specialist.registry';
 import { executeRegisteredTool, listRegisteredToolsMetadata } from '../../ai/tools/registry';
 import { ApprovalDecisionPayload } from '../../ai/tools/tool.types';
 import { AppError } from '../../middleware/error.middleware';
@@ -38,12 +39,17 @@ export class AutomationService {
     return listRegisteredToolsMetadata();
   }
 
+  listAgents() {
+    return listSpecialistAgentsMetadata();
+  }
+
   async runAssistant(userId: string, input: RunAssistantInput) {
     return this.orchestrator.run({
       userId,
       prompt: input.prompt,
       sessionId: input.sessionId,
       threadId: input.threadId,
+      agentRole: input.agentRole,
       tokenBudget: input.tokenBudget,
       provider: input.provider,
       modelId: input.modelId,

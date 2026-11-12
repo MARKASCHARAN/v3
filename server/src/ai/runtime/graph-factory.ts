@@ -128,10 +128,12 @@ export const evaluateGraphToolPermission = (
     return { decision: 'ALLOW' as const, reason: 'No approval policy configured.' };
   }
   const contract = tryGetRegisteredTool(toolName);
+  const riskLevel =
+    toolName === 'delegateToSpecialist' ? 'READ' : (contract?.riskLevel ?? 'INTERNAL_WRITE');
   return evaluateToolPermission({
     role: approvalPolicy.agentRole,
     toolName,
-    riskLevel: contract?.riskLevel ?? 'INTERNAL_WRITE',
+    riskLevel,
     allowAutoApproveWrites: approvalPolicy.allowAutoApproveWrites,
   });
 };

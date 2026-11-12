@@ -28,6 +28,11 @@ export class AutomationController {
     res.status(200).json({ success: true, data: tools });
   };
 
+  listAgents = (_req: AuthenticatedRequest, res: Response): void => {
+    const agents = this.automationService.listAgents();
+    res.status(200).json({ success: true, data: agents });
+  };
+
   run = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = this.getUserId(req);
     const execution = await this.automationService.runAssistant(

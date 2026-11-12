@@ -122,14 +122,15 @@ A functioning personal management system where users can create goals, convert t
 - [x] Build provider abstraction (`server/src/ai/providers/model-router.ts` & `embeddings.ts`)
 - [x] Implement LangGraph `PostgresSaver` runtime foundation (`server/src/ai/runtime/{state,checkpoints,graph-factory,orchestrator}.ts`, `AssistantOrchestrator` 8-step adaptive loop in M2.1–M2.3)
 - [x] Implement agent/tool execution framework (`server/src/ai/tools/registry.ts`, `server/src/ai/tools/internal/`, and 5-level `risk-policy.ts` + `permission-guard.ts` in M2.2)
-- [x] Implement prompt management (`server/src/ai/prompts/prompt.registry.ts`, `assistant.prompt.ts`, `planning.prompt.ts`)
+- [x] Implement prompt management (`server/src/ai/prompts/prompt.registry.ts` with versioned orchestrator and specialist prompts, `assistant.prompt.ts`, `planning.prompt.ts`)
 - [x] Implement conversation context (preferences, memories, workload snapshot, and `ConversationMessage` history)
 - [x] Implement structured tool calling (`V3_TOOL_REGISTRY` `V3ToolContract` entries with Zod input/output schemas and Gemini-safe `toolSchema` wrappers)
 - [x] Implement multi-step workflows (`server/src/ai/workflows/execution.workflow.ts` running checkpointed LangGraph `orchestrator.ts` + `interrupt()`/`Command({ resume })`)
+- [x] Implement specialist agents & dynamic delegation (`server/src/ai/agents/{goal-planning,task,scheduling,research,memory,accountability,communication,developer}.agent.ts`, `delegateToSpecialist`, `GET /api/v1/automation/agents`)
 - [x] Implement execution history (`AiExecution` persistence with `threadId`, `agentRole`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`)
 - [x] Implement human approval and permission checks (5-level risk policy, `AiToolApproval` with `idempotencyKey`/`expiresAt`, `/api/v1/automation/approvals/:id/approve|reject`)
 - [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, and circuit breaker)
-- [ ] Complete Milestone `2.4`–`2.10` hybrid architecture rollout (specialist agents, Deep Agents selective harness, hybrid SQL/FTS/vector retrieval, Trigger.dev workers, MCP, and integrations)
+- [ ] Complete Milestone `2.5`–`2.10` hybrid architecture rollout (hybrid SQL/FTS/vector retrieval, Deep Agents selective harness, Trigger.dev workers, MCP, and integrations)
 
 ### B. Original Features Continued
 
@@ -281,5 +282,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.3` (Main Orchestrator) is complete. Proceed to **Milestone `2.4` (Specialist Agents)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.4` (Specialist Agents) is complete. Proceed to **Milestone `2.5` (Hybrid Data & Memory)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

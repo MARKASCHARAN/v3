@@ -16,6 +16,7 @@ const controller = new AutomationController();
 router.use(requireAuth);
 
 router.get('/tools', controller.listTools);
+router.get('/agents', controller.listAgents);
 router.post('/run', validateRequest({ body: runAssistantSchema }), controller.run);
 router.get(
   '/executions',

@@ -17,10 +17,24 @@ export const aiApprovalStatusSchema = z.enum([
   'EXPIRED',
 ]);
 
+export const automationAgentRoleSchema = z.enum([
+  'MAIN_ORCHESTRATOR',
+  'GOAL_PLANNING',
+  'TASK_PROJECT',
+  'SCHEDULING',
+  'RESEARCH',
+  'MEMORY',
+  'ACCOUNTABILITY',
+  'COMMUNICATION',
+  'DEVELOPER',
+  'AUTOMATION',
+]);
+
 export const runAssistantSchema = z.object({
   prompt: z.string().trim().min(1, 'Prompt is required').max(10000),
   sessionId: z.string().trim().min(1).max(100).default('default'),
   threadId: z.string().trim().min(1).max(150).optional(),
+  agentRole: automationAgentRoleSchema.optional(),
   tokenBudget: z.number().int().min(1000).max(200000).optional(),
   provider: aiProviderSchema.optional(),
   modelId: z.string().trim().min(1).max(100).optional(),

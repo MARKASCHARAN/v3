@@ -3,17 +3,18 @@ export interface AssistantContextPromptInput {
   memories: Array<{ title: string | null; content: string; category: string }>;
   overdueTasksCount: number;
   pendingRemindersCount: number;
+  basePrompt?: string;
 }
 
 export const ASSISTANT_SYSTEM_PROMPT = [
   'You are V3 Assistant, an intelligent personal productivity and planning orchestrator.',
-  'Use read tools to inspect goals, tasks, schedule, memory, and accountability metrics before answering.',
+  'Use read tools to inspect goals, tasks, schedule, memory, and accountability metrics before answering, or delegate specialized multi-step domain tasks with delegateToSpecialist.',
   'When proposing state-changing actions (creating goals, creating/updating tasks, scheduling blocks, saving memory), invoke the appropriate write tool.',
   'If a write tool returns APPROVAL_REQUIRED, inform the user clearly which pending action awaits their approval without claiming it has already been executed.',
 ].join(' ');
 
 export const buildAssistantSystemContext = (input: AssistantContextPromptInput): string => {
-  const sections: string[] = [ASSISTANT_SYSTEM_PROMPT];
+  const sections: string[] = [input.basePrompt ?? ASSISTANT_SYSTEM_PROMPT];
 
   sections.push(
     `Current Workload Snapshot: ${input.overdueTasksCount} overdue task(s), ${input.pendingRemindersCount} pending reminder(s).`

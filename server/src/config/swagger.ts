@@ -505,6 +505,14 @@ const swaggerDocument = {
         },
       },
     },
+    '/automation/agents': {
+      get: {
+        summary: 'List registered specialist AI agents and their scoped permission profiles',
+        responses: {
+          '200': { description: 'Specialist agents returned' },
+        },
+      },
+    },
     '/automation/approvals/{id}/approve': {
       post: {
         summary: 'Approve and execute a pending AI tool call',
