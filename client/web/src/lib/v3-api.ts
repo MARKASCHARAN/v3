@@ -142,6 +142,7 @@ export const schedulingApi = {
     durationMinutes?: number;
     dayStartHour?: number;
     dayEndHour?: number;
+    tzOffsetMinutes?: number;
   }) => apiRequest<AvailableSlot[]>('/scheduling/slots', { query }),
 };
 

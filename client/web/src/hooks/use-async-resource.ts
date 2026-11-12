@@ -2,13 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ApiClientError } from '@/lib/api-client';
+import { useAuthSession } from '@/lib/auth-storage';
 
 export function useAsyncResource<T>(fetcher: () => Promise<T>, fallbackError: string) {
+  const session = useAuthSession();
+  const hasToken = Boolean(session?.accessToken);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
+    if (!hasToken) {
+      return;
+    }
     try {
       const result = await fetcher();
       setData(result);
@@ -18,9 +24,12 @@ export function useAsyncResource<T>(fetcher: () => Promise<T>, fallbackError: st
     } finally {
       setLoading(false);
     }
-  }, [fetcher, fallbackError]);
+  }, [fetcher, fallbackError, hasToken]);
 
   useEffect(() => {
+    if (!hasToken) {
+      return;
+    }
     let active = true;
     fetcher()
       .then((result) => {
@@ -41,8 +50,7 @@ export function useAsyncResource<T>(fetcher: () => Promise<T>, fallbackError: st
     return () => {
       active = false;
     };
-  }, [fetcher, fallbackError]);
+  }, [fetcher, fallbackError, hasToken]);
 
   return { data, error, setError, loading, reload };
 }
-

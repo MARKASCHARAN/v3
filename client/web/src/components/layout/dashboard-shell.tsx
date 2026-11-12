@@ -21,6 +21,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const session = useRequireAuth();
+  const hasSession = Boolean(session?.accessToken);
 
   const handleLogout = async () => {
     try {
@@ -33,14 +34,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     clearAuthSession();
     router.replace('/login');
   };
-
-  if (!session?.accessToken) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <p className="text-sm text-slate-500">Checking session...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -55,9 +48,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 Personal Management & AI
               </p>
             </div>
-            <Button variant="ghost" onClick={handleLogout} className="lg:hidden">
-              Sign out
-            </Button>
+            {hasSession && (
+              <Button variant="ghost" onClick={handleLogout} className="lg:hidden">
+                Sign out
+              </Button>
+            )}
           </div>
 
           <nav className="mt-4 flex gap-1.5 overflow-x-auto pb-1 lg:mt-6 lg:flex-col lg:overflow-visible">
@@ -79,20 +74,28 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <div className="mt-8 hidden border-t border-slate-200 pt-4 lg:block dark:border-slate-800">
-            <p className="truncate text-sm font-medium">{session.user?.name || 'V3 User'}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-              {session.user?.email || 'Authenticated session'}
-            </p>
-            <Button variant="secondary" onClick={handleLogout} className="mt-3 w-full">
-              Sign out
-            </Button>
-          </div>
+          {hasSession && (
+            <div className="mt-8 hidden border-t border-slate-200 pt-4 lg:block dark:border-slate-800">
+              <p className="truncate text-sm font-medium">{session?.user?.name || 'V3 User'}</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                {session?.user?.email || 'Authenticated session'}
+              </p>
+              <Button variant="secondary" onClick={handleLogout} className="mt-3 w-full">
+                Sign out
+              </Button>
+            </div>
+          )}
         </aside>
 
-        <main className="flex-1 p-5 lg:p-8">{children}</main>
+        <main className="flex-1 p-5 lg:p-8">
+          {!hasSession && (
+            <div className="flex min-h-[50vh] items-center justify-center">
+              <p className="text-sm text-slate-500">Checking session...</p>
+            </div>
+          )}
+          <div className={hasSession ? undefined : 'hidden'}>{children}</div>
+        </main>
       </div>
     </div>
   );
 }
-

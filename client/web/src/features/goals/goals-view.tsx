@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorBanner,
   ProgressBar,
+  inlineInputClassName,
   inputClassName,
 } from '@/components/ui/primitives';
 import { useAsyncResource } from '@/hooks/use-async-resource';
@@ -129,7 +130,7 @@ export function GoalsView() {
         <select
           value={filterTimeframe}
           onChange={(e) => setFilterTimeframe(e.target.value)}
-          className={`${inputClassName} w-auto`}
+          className={inlineInputClassName}
         >
           <option value="">All Timeframes</option>
           {timeframes.map((tf) => (
@@ -231,7 +232,7 @@ export function GoalsView() {
                   <select
                     value={goal.status}
                     onChange={(e) => handleStatusChange(goal.id, e.target.value as GoalStatus)}
-                    className={`${inputClassName} w-auto py-1.5`}
+                    className={`${inlineInputClassName} py-1.5`}
                   >
                     {statuses.map((st) => (
                       <option key={st} value={st}>

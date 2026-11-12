@@ -98,6 +98,10 @@ export function EmptyState({ title, description }: { title: string; description:
   );
 }
 
-export const inputClassName =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-400';
+export const baseFieldClassName =
+  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-400';
+
+export const inputClassName = `w-full ${baseFieldClassName}`;
+
+export const inlineInputClassName = `w-auto ${baseFieldClassName}`;
 

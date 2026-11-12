@@ -55,7 +55,7 @@ This document defines V3's target technology stack, repository scope, and three-
 
 ### A. Project Initialization
 
-- [ ] Create GitHub repository `v3` *(local `.git` initialized; GitHub remote and initial commit pending)*
+- [x] Create GitHub repository `v3` (`MARKASCHARAN/v3` on `main`)
 - [x] Create `server`, `client/web`, `client/mobile`, and `docs` directories
 - [x] Initialize Express + TypeScript backend
 - [x] Initialize Next.js website

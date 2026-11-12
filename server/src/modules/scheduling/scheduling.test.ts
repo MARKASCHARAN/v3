@@ -28,10 +28,12 @@ describe('Scheduling Module', () => {
       const query = suggestSlotsQuerySchema.parse({
         date: '2026-11-12',
         durationMinutes: '45',
+        tzOffsetMinutes: '-330',
       });
       expect(query.durationMinutes).toBe(45);
       expect(query.dayStartHour).toBe(8);
       expect(query.dayEndHour).toBe(20);
+      expect(query.tzOffsetMinutes).toBe(-330);
     });
   });
 

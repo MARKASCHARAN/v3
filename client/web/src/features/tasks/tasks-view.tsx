@@ -7,6 +7,7 @@ import {
   Card,
   EmptyState,
   ErrorBanner,
+  inlineInputClassName,
   inputClassName,
 } from '@/components/ui/primitives';
 import { useAsyncResource } from '@/hooks/use-async-resource';
@@ -123,7 +124,7 @@ export function TasksView() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className={`${inputClassName} w-auto`}
+            className={inlineInputClassName}
           >
             <option value="">All Statuses</option>
             {statuses.map((st) => (
@@ -235,7 +236,7 @@ export function TasksView() {
                 <select
                   value={task.priority}
                   onChange={(e) => handleUpdatePriority(task.id, e.target.value as TaskPriority)}
-                  className={`${inputClassName} w-auto py-1.5`}
+                  className={`${inlineInputClassName} py-1.5`}
                 >
                   {priorities.map((p) => (
                     <option key={p} value={p}>
@@ -246,7 +247,7 @@ export function TasksView() {
                 <select
                   value={task.status}
                   onChange={(e) => handleUpdateStatus(task.id, e.target.value as TaskStatus)}
-                  className={`${inputClassName} w-auto py-1.5`}
+                  className={`${inlineInputClassName} py-1.5`}
                 >
                   {statuses.map((st) => (
                     <option key={st} value={st}>

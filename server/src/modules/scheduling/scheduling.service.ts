@@ -144,10 +144,10 @@ export class SchedulingService {
 
   async suggestSlots(userId: string, query: SuggestSlotsQueryInput) {
     const windowStart = new Date(query.date);
-    windowStart.setUTCHours(query.dayStartHour, 0, 0, 0);
+    windowStart.setUTCHours(query.dayStartHour, query.tzOffsetMinutes, 0, 0);
 
     const windowEnd = new Date(query.date);
-    windowEnd.setUTCHours(query.dayEndHour, 0, 0, 0);
+    windowEnd.setUTCHours(query.dayEndHour, query.tzOffsetMinutes, 0, 0);
 
     const blocks = await this.schedulingRepository.findAllByUserId(userId, {
       from: windowStart,

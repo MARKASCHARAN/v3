@@ -7,6 +7,7 @@ import {
   Card,
   EmptyState,
   ErrorBanner,
+  baseFieldClassName,
   inputClassName,
 } from '@/components/ui/primitives';
 import { useAsyncResource } from '@/hooks/use-async-resource';
@@ -117,7 +118,7 @@ export function MemoryView() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search memories..."
-          className={`${inputClassName} w-64`}
+          className={`w-full sm:w-64 ${baseFieldClassName}`}
         />
       </div>
 

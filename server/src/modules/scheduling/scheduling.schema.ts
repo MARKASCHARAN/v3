@@ -60,6 +60,7 @@ export const suggestSlotsQuerySchema = z
     durationMinutes: z.coerce.number().int().min(15).max(480).default(60),
     dayStartHour: z.coerce.number().int().min(0).max(23).default(8),
     dayEndHour: z.coerce.number().int().min(1).max(24).default(20),
+    tzOffsetMinutes: z.coerce.number().int().min(-840).max(840).default(0),
   })
   .refine((data) => data.dayEndHour > data.dayStartHour, {
     message: 'dayEndHour must be after dayStartHour',

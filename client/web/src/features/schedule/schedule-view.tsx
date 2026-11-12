@@ -1,12 +1,13 @@
 'use client';
 
-import { FormEvent, useCallback, useState } from 'react';
+import { FormEvent, useCallback, useState, useSyncExternalStore } from 'react';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
   ErrorBanner,
+  inlineInputClassName,
   inputClassName,
 } from '@/components/ui/primitives';
 import { useAsyncResource } from '@/hooks/use-async-resource';
@@ -30,7 +31,20 @@ const categories: TimeBlockCategory[] = [
 
 const blockStatuses: TimeBlockStatus[] = ['SCHEDULED', 'COMPLETED', 'CANCELLED', 'MISSED'];
 
-const toDateInputValue = (date: Date): string => date.toISOString().slice(0, 10);
+const toDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toLocalDayBounds = (dateValue: string) => {
+  const [year = 1970, month = 1, day = 1] = dateValue.split('-').map(Number);
+  return {
+    dayStart: new Date(year, month - 1, day, 0, 0, 0, 0),
+    dayEnd: new Date(year, month - 1, day, 23, 59, 59, 999),
+  };
+};
 
 const toLocalDatetimeInput = (iso: string): string => {
   const date = new Date(iso);
@@ -38,8 +52,20 @@ const toLocalDatetimeInput = (iso: string): string => {
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 };
 
+const subscribeNoop = () => () => {};
+
+const useLocalToday = (): string => {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => toDateInputValue(new Date()),
+    () => ''
+  );
+};
+
 export function ScheduleView() {
-  const [selectedDate, setSelectedDate] = useState(() => toDateInputValue(new Date()));
+  const clientToday = useLocalToday();
+  const [selectedDateOverride, setSelectedDateOverride] = useState('');
+  const selectedDate = selectedDateOverride || clientToday;
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TimeBlockCategory>('DEEP_WORK');
   const [startTime, setStartTime] = useState('');
@@ -50,8 +76,10 @@ export function ScheduleView() {
   const [durationMinutes, setDurationMinutes] = useState(60);
 
   const fetchSchedule = useCallback(async () => {
-    const dayStart = new Date(`${selectedDate}T00:00:00.000Z`);
-    const dayEnd = new Date(`${selectedDate}T23:59:59.999Z`);
+    if (!selectedDate) {
+      return { blocks: [], slots: [], tasks: [], goals: [] };
+    }
+    const { dayStart, dayEnd } = toLocalDayBounds(selectedDate);
 
     const [blocks, slots, tasks, goals] = await Promise.all([
       schedulingApi.listBlocks({
@@ -61,6 +89,7 @@ export function ScheduleView() {
       schedulingApi.suggestSlots({
         date: selectedDate,
         durationMinutes,
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
       tasksApi.list(),
       goalsApi.list(),
@@ -147,13 +176,13 @@ export function ScheduleView() {
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className={`${inputClassName} w-auto`}
+            onChange={(e) => setSelectedDateOverride(e.target.value)}
+            className={inlineInputClassName}
           />
           <select
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            className={`${inputClassName} w-auto`}
+            className={inlineInputClassName}
           >
             <option value={30}>30 min slots</option>
             <option value={60}>60 min slots</option>
@@ -285,7 +314,7 @@ export function ScheduleView() {
                     onChange={(e) =>
                       handleStatusChange(block.id, e.target.value as TimeBlockStatus)
                     }
-                    className={`${inputClassName} w-auto py-1.5`}
+                    className={`${inlineInputClassName} py-1.5`}
                   >
                     {blockStatuses.map((st) => (
                       <option key={st} value={st}>
