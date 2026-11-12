@@ -28,6 +28,7 @@ export interface MainOrchestratorConfig {
   approvalPolicy?: GraphApprovalPolicy;
   contextLoader?: ContextLoaderFn;
   maxConsecutiveErrors?: number;
+  maxReplans?: number;
 }
 
 const buildStepPlanFromToolCalls = (
@@ -60,11 +61,36 @@ const updateStepsAfterObserve = (
     };
   });
 
+const computeToolSignatures = (
+  toolCalls: Array<{ name: string; args?: Record<string, unknown> }>
+): string[] => toolCalls.map((call) => `${call.name}:${JSON.stringify(call.args ?? {})}`).sort();
+
+const signaturesMatch = (a: string[], b: string[]): boolean => {
+  if (a.length === 0 || a.length !== b.length) {
+    return false;
+  }
+  return a.every((value, idx) => value === b[idx]);
+};
+
+const findLatestTurnSignatures = (messages: BaseMessage[]): string[] => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg && isAIMessage(msg) && (msg.tool_calls?.length ?? 0) > 0) {
+      return computeToolSignatures(msg.tool_calls ?? []);
+    }
+  }
+  return [];
+};
+
 const buildFallbackSummaryText = (state: V3AgentState): string => {
   const observationsBlock =
     state.observations.length > 0
       ? `\n\nCompleted observations:\n- ${state.observations.slice(-5).join('\n- ')}`
       : '';
+
+  if (state.stopReason === 'STUCK_LOOP') {
+    return `Stopped execution after detecting a repeated tool-call loop that persisted past replanning.${observationsBlock}`;
+  }
 
   if (state.stopReason === 'CIRCUIT_BREAKER') {
     return `Stopped execution after repeated consecutive tool errors to prevent an unstable loop.${observationsBlock}`;
@@ -95,6 +121,12 @@ const buildAdaptiveSystemMessage = (basePrompt: string, state: V3AgentState): Sy
     }
   }
 
+  if (state.replanCount > 0) {
+    sections.push(
+      `Replan Directive (${state.replanCount}): Previous attempts repeated without progress. Choose a different tool, narrow parameters, delegate to another specialist, or synthesize what is currently known for the user.`
+    );
+  }
+
   if (state.consecutiveErrors > 0) {
     sections.push(
       `Notice: Previous step encountered ${state.consecutiveErrors} consecutive tool error(s). Adapt your approach or explain the issue clearly instead of retrying the exact failing call.`
@@ -115,6 +147,7 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
   );
 
   const maxConsecutiveErrors = config.maxConsecutiveErrors ?? aiConfig.defaultMaxConsecutiveErrors;
+  const maxReplans = config.maxReplans ?? aiConfig.defaultMaxReplans;
   let totalRetryAttempts = 0;
 
   const receiveAndContextNode = async (state: V3AgentState) => {
@@ -221,6 +254,9 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
 
     const nextConsecutiveErrors = turnHadError && !turnHadSuccess ? state.consecutiveErrors + 1 : 0;
 
+    const currentSignatures = findLatestTurnSignatures(state.messages);
+    const repeatedSameCalls = signaturesMatch(currentSignatures, state.lastToolSignatures);
+
     const updatedPlanSteps = updateStepsAfterObserve(
       state.planSteps,
       latestObservations,
@@ -230,16 +266,32 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
     const stopReason =
       nextConsecutiveErrors >= maxConsecutiveErrors
         ? 'CIRCUIT_BREAKER'
-        : state.tokensUsed >= state.tokenBudget
-          ? 'BUDGET_EXCEEDED'
-          : state.iterationCount >= state.maxIterations
-            ? 'MAX_ITERATIONS'
-            : null;
+        : repeatedSameCalls && state.replanCount >= maxReplans
+          ? 'STUCK_LOOP'
+          : state.tokensUsed >= state.tokenBudget
+            ? 'BUDGET_EXCEEDED'
+            : state.iterationCount >= state.maxIterations
+              ? 'MAX_ITERATIONS'
+              : repeatedSameCalls
+                ? 'REPLAN_REQUIRED'
+                : null;
 
     return {
       consecutiveErrors: nextConsecutiveErrors,
+      lastToolSignatures: currentSignatures,
       planSteps: updatedPlanSteps,
       stopReason,
+    };
+  };
+
+  const replanNode = async (state: V3AgentState) => {
+    const nextReplanCount = state.replanCount + 1;
+    return {
+      replanCount: nextReplanCount,
+      stopReason: null,
+      observations: [
+        `Replan #${nextReplanCount}: detected repeated tool call signatures; switching execution strategy.`,
+      ],
     };
   };
 
@@ -302,9 +354,10 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
     return 'execute_tools';
   };
 
-  const routeAfterObserve = (state: V3AgentState): 'reason' | 'fallback_summary' => {
+  const routeAfterObserve = (state: V3AgentState): 'reason' | 'replan' | 'fallback_summary' => {
     if (
       state.stopReason === 'CIRCUIT_BREAKER' ||
+      state.stopReason === 'STUCK_LOOP' ||
       state.stopReason === 'BUDGET_EXCEEDED' ||
       state.stopReason === 'MAX_ITERATIONS' ||
       state.consecutiveErrors >= maxConsecutiveErrors ||
@@ -313,6 +366,11 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
     ) {
       return 'fallback_summary';
     }
+
+    if (state.stopReason === 'REPLAN_REQUIRED') {
+      return 'replan';
+    }
+
     return 'reason';
   };
 
@@ -322,6 +380,7 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
     .addNode('execute_tools', executeToolsNode)
     .addNode('approval_gate', approvalGateNode)
     .addNode('observe', observeNode)
+    .addNode('replan', replanNode)
     .addNode('evaluate', evaluateNode)
     .addNode('fallback_summary', fallbackSummaryNode)
     .addEdge(START, 'receive_and_context')
@@ -334,7 +393,8 @@ export const createMainOrchestratorGraph = (config: MainOrchestratorConfig) => {
     ])
     .addEdge('execute_tools', 'observe')
     .addEdge('approval_gate', 'observe')
-    .addConditionalEdges('observe', routeAfterObserve, ['reason', 'fallback_summary'])
+    .addConditionalEdges('observe', routeAfterObserve, ['reason', 'replan', 'fallback_summary'])
+    .addEdge('replan', 'reason')
     .addEdge('evaluate', END)
     .addEdge('fallback_summary', END)
     .compile({ checkpointer: config.checkpointer });

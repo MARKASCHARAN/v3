@@ -9,6 +9,7 @@ export const aiConfig = {
   defaultTokenBudget: 60000,
   defaultMaxIterations: 8,
   defaultMaxConsecutiveErrors: 3,
+  defaultMaxReplans: 1,
   defaultApprovalTtlMs: 24 * 60 * 60 * 1000,
   embeddingDimensions: 768,
   langsmith: {

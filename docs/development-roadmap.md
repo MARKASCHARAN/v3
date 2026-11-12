@@ -128,10 +128,11 @@ A functioning personal management system where users can create goals, convert t
 - [x] Implement structured tool calling (`V3_TOOL_REGISTRY` `V3ToolContract` entries with Zod input/output schemas and Gemini-safe `toolSchema` wrappers)
 - [x] Implement multi-step workflows (`server/src/ai/workflows/execution.workflow.ts` running checkpointed LangGraph `orchestrator.ts` + `interrupt()`/`Command({ resume })`)
 - [x] Implement specialist agents & dynamic delegation (`server/src/ai/agents/{goal-planning,task,scheduling,research,memory,accountability,communication,developer}.agent.ts`, `delegateToSpecialist`, `GET /api/v1/automation/agents`)
-- [x] Implement execution history (`AiExecution` persistence with `threadId`, `agentRole`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`)
+- [x] Implement autonomous delegation & replanning (`delegateParallelSpecialists`, `parentExecutionId` child executions, selective [`deep-harness.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/agents/deep-harness.ts), and `orchestrator.ts` stuck-detection + `replan` edge in M2.6)
+- [x] Implement execution history (`AiExecution` persistence with `threadId`, `parentExecutionId`, `agentRole`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`)
 - [x] Implement human approval and permission checks (5-level risk policy, `AiToolApproval` with `idempotencyKey`/`expiresAt`, `/api/v1/automation/approvals/:id/approve|reject`)
-- [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, and circuit breaker)
-- [ ] Complete Milestone `2.6`–`2.10` hybrid architecture rollout (parallel delegation & Deep Agents selective harness, Trigger.dev workers, external integrations, MCP, safety guards, and CI/CD)
+- [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, stuck-loop replanning, and circuit breaker)
+- [ ] Complete Milestone `2.7`–`2.10` hybrid architecture rollout (Trigger.dev background autonomy workers, external integrations, MCP, safety guards, and CI/CD)
 
 ### B. Original Features Continued
 
@@ -283,5 +284,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.5` (Hybrid Data & Memory) is complete. Proceed to **Milestone `2.6` (Autonomous Delegation)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.6` (Autonomous Delegation) is complete. Proceed to **Milestone `2.7` (Background Autonomy)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

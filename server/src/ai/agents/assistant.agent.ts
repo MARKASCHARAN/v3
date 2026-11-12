@@ -24,6 +24,8 @@ import {
   runMultiStepToolWorkflow,
 } from '../workflows/execution.workflow';
 import {
+  buildDeepExecutionTool,
+  buildParallelDelegationTool,
   buildSpecialistDelegationTool,
   getSpecialistAgent,
   isSpecialistRole,
@@ -110,6 +112,7 @@ export interface OrchestratorPersistence {
   loadContext(userId: string, sessionId: string): Promise<AssistantLoadedContext>;
   createExecution(data: {
     userId: string;
+    parentExecutionId?: string;
     sessionId: string;
     threadId: string;
     agentRole: AgentRole;
@@ -225,6 +228,7 @@ const prismaPersistence: OrchestratorPersistence = {
     return prisma.aiExecution.create({
       data: {
         userId: data.userId,
+        parentExecutionId: data.parentExecutionId,
         sessionId: data.sessionId,
         threadId: data.threadId,
         agentRole: data.agentRole,
@@ -405,19 +409,55 @@ export class AssistantOrchestrator {
       }
     };
 
+    const delegationConfig = {
+      userId: params.userId,
+      executionId: execution.id,
+      parentThreadId: threadId,
+      sessionId: params.sessionId,
+      allowAutoApproveWrites: params.allowAutoApproveWrites,
+      onPendingApproval: createApprovalRecord,
+      contextLoader,
+      tokenBudget,
+      createSubagentExecution: (sub: {
+        parentExecutionId: string;
+        userId: string;
+        sessionId: string;
+        threadId: string;
+        agentRole: AgentRole;
+        prompt: string;
+        tokenBudget: number;
+      }) =>
+        this.persistence.createExecution({
+          ...sub,
+          triggerType: 'SUBAGENT',
+        }),
+      completeSubagentExecution: async (
+        subId: string,
+        data: {
+          status: 'COMPLETED' | 'AWAITING_APPROVAL' | 'FAILED';
+          responseText?: string;
+          errorMessage?: string;
+          tokensUsed?: number;
+          stepsData?: unknown;
+        }
+      ) => {
+        await this.persistence.completeExecution(subId, {
+          status: data.status,
+          responseText: data.responseText,
+          errorMessage: data.errorMessage,
+          tokensUsed: data.tokensUsed,
+          stepsData: data.stepsData as ExecutionStepTrace[] | undefined,
+        });
+      },
+    };
+
     const tools = specialist
       ? baseTools
       : [
           ...baseTools,
-          buildSpecialistDelegationTool({
-            userId: params.userId,
-            executionId: execution.id,
-            parentThreadId: threadId,
-            sessionId: params.sessionId,
-            allowAutoApproveWrites: params.allowAutoApproveWrites,
-            onPendingApproval: createApprovalRecord,
-            contextLoader,
-          }),
+          buildSpecialistDelegationTool(delegationConfig),
+          buildParallelDelegationTool(delegationConfig),
+          buildDeepExecutionTool(delegationConfig),
         ];
 
     try {

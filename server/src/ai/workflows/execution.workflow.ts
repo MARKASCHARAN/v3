@@ -32,6 +32,7 @@ export interface MultiStepWorkflowInput {
   mode?: ExecutionMode;
   tokenBudget?: number;
   maxConsecutiveErrors?: number;
+  maxReplans?: number;
   checkpointNamespace?: string;
   runId?: string;
   checkpointer?: BaseCheckpointSaver;
@@ -62,6 +63,7 @@ export interface MultiStepWorkflowOutput {
   interrupted: boolean;
   pendingApprovalIds: string[];
   stopReason?: string | null;
+  replanCount?: number;
   planSteps?: PlanStepItem[];
   steps: ExecutionStepTrace[];
 }
@@ -127,6 +129,7 @@ export const runMultiStepToolWorkflow = async (
     approvalPolicy: input.approvalPolicy,
     contextLoader: input.contextLoader,
     maxConsecutiveErrors: input.maxConsecutiveErrors,
+    maxReplans: input.maxReplans,
   });
 
   const config = buildCheckpointConfig(input.threadId, input.checkpointNamespace, input.runId);
@@ -148,6 +151,8 @@ export const runMultiStepToolWorkflow = async (
       maxIterations: input.maxSteps,
       tokenBudget,
       consecutiveErrors: 0,
+      lastToolSignatures: [],
+      replanCount: 0,
       stopReason: null,
       finalResponse: '',
       error: null,
@@ -172,6 +177,7 @@ export const runMultiStepToolWorkflow = async (
     interrupted: interruptState.interrupted,
     pendingApprovalIds: interruptState.approvalIds,
     stopReason: result.stopReason,
+    replanCount: result.replanCount,
     planSteps: result.planSteps,
     steps,
   };

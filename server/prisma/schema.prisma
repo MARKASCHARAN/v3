@@ -239,6 +239,7 @@ model Plan {
 model AiExecution {
   id                  String           @id @default(uuid())
   userId              String
+  parentExecutionId   String?
   sessionId           String           @default("default")
   threadId            String           @default(uuid())
   agentRole           String           @default("MAIN_ORCHESTRATOR")
@@ -260,9 +261,12 @@ model AiExecution {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentExecution     AiExecution?     @relation("ExecutionSubagents", fields: [parentExecutionId], references: [id], onDelete: SetNull)
+  subagentExecutions  AiExecution[]    @relation("ExecutionSubagents")
   approvals           AiToolApproval[]
 
   @@index([threadId])
+  @@index([parentExecutionId])
   @@map("ai_executions")
 }
 

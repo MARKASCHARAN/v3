@@ -14,6 +14,20 @@ export class AutomationRepository {
         approvals: {
           orderBy: { createdAt: 'asc' },
         },
+        subagentExecutions: {
+          select: {
+            id: true,
+            agentRole: true,
+            triggerType: true,
+            status: true,
+            threadId: true,
+            tokensUsed: true,
+            responseText: true,
+            createdAt: true,
+            completedAt: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: filters.limit ?? 25,
@@ -25,6 +39,20 @@ export class AutomationRepository {
       where: { id, userId },
       include: {
         approvals: {
+          orderBy: { createdAt: 'asc' },
+        },
+        subagentExecutions: {
+          select: {
+            id: true,
+            agentRole: true,
+            triggerType: true,
+            status: true,
+            threadId: true,
+            tokensUsed: true,
+            responseText: true,
+            createdAt: true,
+            completedAt: true,
+          },
           orderBy: { createdAt: 'asc' },
         },
       },

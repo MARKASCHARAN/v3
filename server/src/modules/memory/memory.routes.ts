@@ -33,11 +33,7 @@ router.get(
 router.get('/hybrid', validateRequest({ query: hybridSearchQuerySchema }), controller.hybridSearch);
 router.post('/propose', validateRequest({ body: proposeMemorySchema }), controller.proposeMemory);
 router.post('/prune', controller.pruneExpired);
-router.get(
-  '/hybrid',
-  validateRequest({ query: hybridSearchQuerySchema }),
-  controller.hybridSearch
-);
+router.get('/hybrid', validateRequest({ query: hybridSearchQuerySchema }), controller.hybridSearch);
 router.post('/propose', validateRequest({ body: proposeMemorySchema }), controller.proposeMemory);
 router.post('/prune', controller.pruneExpired);
 router.post(

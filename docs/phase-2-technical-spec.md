@@ -495,10 +495,10 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Implement `server/src/ai/memory/hybrid-retrieval.ts` (SQL + FTS + `pgvector` RRF fusion), `extraction.ts`, and `consolidation.ts`.
 - [x] Add memory lifecycle fields (`memoryType`, `sourceType`, `sourceId`, `confidence`, `expiresAt`, `supersededById`), candidate memory validation/supersession rules, `/api/v1/memory/{hybrid,propose,prune}`, and `hybridSearchMemory`/`proposeMemory` tools.
 
-### Milestone `2.6` — Autonomous Delegation
-- Implement parallel subagent execution and isolated subagent threads (`parentExecutionId` linked to parent `AiExecution`).
-- Evaluate and selectively adopt `deepagents` (`1.16.4`) for multi-step deep research and long-running project execution tasks.
-- Add stuck-detection heuristics and orchestrator replanning edges.
+### Milestone `2.6` — Autonomous Delegation (Completed)
+- [x] Implement parallel subagent execution (`delegateParallelSpecialists`) and isolated subagent threads with `parentExecutionId` self-relation on `AiExecution` (`20261112112246_add_parent_execution_relation` + `20261112112350_restore_memories_hnsw_index`).
+- [x] Evaluate `deepagents` (`1.16.4`) — recorded peer dependency conflict against `@langchain/core@1.4.0` (`langsmith@0.12.0` vs `langsmith <0.10.0`) — and implemented the selective native LangGraph deep execution harness ([`deep-harness.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/agents/deep-harness.ts) / `runDeepProjectExecution`) preserving V3 permission guards and `PostgresSaver` checkpoints.
+- [x] Add stuck-detection heuristics (`lastToolSignatures` / `STUCK_LOOP`) and orchestrator replanning edges (`observe` -> `replan` -> `reason`) in [`orchestrator.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/runtime/orchestrator.ts).
 
 ### Milestone `2.7` — Background Autonomy
 - Install `@trigger.dev/sdk` (`4.8.4`) and add `DomainEvent` + `BackgroundJob` Prisma models.
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.6` (Autonomous Delegation)** by adding `parentExecutionId` on `AiExecution`, implementing parallel subagent execution with isolated subagent threads, selectively integrating `deepagents` (`1.16.4`) for deep multi-step research, and adding stuck-detection + orchestrator replanning edges.
+1. Begin **Milestone `2.7` (Background Autonomy)** by installing `@trigger.dev/sdk`, adding `DomainEvent` and `BackgroundJob` Prisma models, implementing `server/src/modules/events/` and `server/src/jobs/` (daily accountability review cron, missed-task trigger, approval expiry sweeper, and dead-letter recovery).
 

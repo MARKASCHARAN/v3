@@ -83,6 +83,14 @@ export const V3AgentStateAnnotation = Annotation.Root({
     reducer: (_prev, next) => next,
     default: () => 0,
   }),
+  lastToolSignatures: Annotation<string[]>({
+    reducer: (_prev, next) => next,
+    default: () => [],
+  }),
+  replanCount: Annotation<number>({
+    reducer: (_prev, next) => next,
+    default: () => 0,
+  }),
   stopReason: Annotation<string | null>({
     reducer: (_prev, next) => next,
     default: () => null,

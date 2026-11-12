@@ -157,4 +157,3 @@ export class MemoryConsolidationService {
     return { prunedCount };
   }
 }
-

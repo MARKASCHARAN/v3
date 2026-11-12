@@ -120,6 +120,12 @@ export const extractStepTracesFromMessages = (
   return traces;
 };
 
+const ORCHESTRATION_DELEGATION_TOOLS = new Set([
+  'delegateToSpecialist',
+  'delegateParallelSpecialists',
+  'runDeepProjectExecution',
+]);
+
 export const evaluateGraphToolPermission = (
   approvalPolicy: GraphApprovalPolicy | undefined,
   toolName: string
@@ -128,8 +134,9 @@ export const evaluateGraphToolPermission = (
     return { decision: 'ALLOW' as const, reason: 'No approval policy configured.' };
   }
   const contract = tryGetRegisteredTool(toolName);
-  const riskLevel =
-    toolName === 'delegateToSpecialist' ? 'READ' : (contract?.riskLevel ?? 'INTERNAL_WRITE');
+  const riskLevel = ORCHESTRATION_DELEGATION_TOOLS.has(toolName)
+    ? 'READ'
+    : (contract?.riskLevel ?? 'INTERNAL_WRITE');
   return evaluateToolPermission({
     role: approvalPolicy.agentRole,
     toolName,

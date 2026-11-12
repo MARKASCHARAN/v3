@@ -326,6 +326,113 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
     expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
+  it('detects repeated tool calls, transitions through replan node, and recovers', async () => {
+    const checkpointer = new MemorySaver();
+    const invokeMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new AIMessage({
+          content: '',
+          tool_calls: [{ id: 'tc-r1', name: 'echoTool', args: { text: 'stale' } }],
+          usage_metadata: { input_tokens: 15, output_tokens: 5, total_tokens: 20 },
+        })
+      )
+      .mockResolvedValueOnce(
+        new AIMessage({
+          content: '',
+          tool_calls: [{ id: 'tc-r2', name: 'echoTool', args: { text: 'stale' } }],
+          usage_metadata: { input_tokens: 20, output_tokens: 5, total_tokens: 25 },
+        })
+      )
+      .mockResolvedValueOnce(
+        new AIMessage({
+          content: 'Recovered after replanning strategy.',
+          usage_metadata: { input_tokens: 30, output_tokens: 10, total_tokens: 40 },
+        })
+      );
+
+    const replanModel: RunnableChatModel = {
+      bindTools: () => ({ invoke: invokeMock }),
+      invoke: invokeMock,
+    };
+
+    const echoTool = tool(async ({ text }) => `echo:${text}`, {
+      name: 'echoTool',
+      description: 'Echoes text.',
+      schema: z.object({ text: z.string() }),
+    });
+
+    const output = await runMultiStepToolWorkflow({
+      model: replanModel,
+      system: 'System context',
+      messages: [new HumanMessage('Try completing with adaptation')],
+      tools: [echoTool],
+      maxSteps: 6,
+      maxReplans: 1,
+      threadId: 'thread-replan-1',
+      executionId: 'exec-replan-1',
+      userId: 'user-1',
+      sessionId: 'default',
+      objective: 'Test replanning',
+      checkpointer,
+    });
+
+    expect(output.stopReason).toBe('COMPLETED');
+    expect(output.replanCount).toBe(1);
+    expect(output.text).toBe('Recovered after replanning strategy.');
+
+    const thirdCallMessages = invokeMock.mock.calls[2]?.[0] ?? [];
+    const replanSystemMsg = thirdCallMessages.find((msg: unknown) =>
+      isSystemMessage(msg as HumanMessage)
+    );
+    expect(String(replanSystemMsg?.content)).toContain('Replan Directive (1)');
+  });
+
+  it('halts with STUCK_LOOP when repeated calls persist after replanning', async () => {
+    const checkpointer = new MemorySaver();
+    const invokeMock = vi.fn().mockImplementation(
+      async () =>
+        new AIMessage({
+          content: '',
+          tool_calls: [
+            { id: `tc-stuck-${Math.random()}`, name: 'echoTool', args: { text: 'same' } },
+          ],
+          usage_metadata: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+        })
+    );
+
+    const stuckModel: RunnableChatModel = {
+      bindTools: () => ({ invoke: invokeMock }),
+      invoke: invokeMock,
+    };
+
+    const echoTool = tool(async ({ text }) => `echo:${text}`, {
+      name: 'echoTool',
+      description: 'Echoes text.',
+      schema: z.object({ text: z.string() }),
+    });
+
+    const output = await runMultiStepToolWorkflow({
+      model: stuckModel,
+      system: 'System context',
+      messages: [new HumanMessage('Loop on identical signature')],
+      tools: [echoTool],
+      maxSteps: 6,
+      maxReplans: 1,
+      threadId: 'thread-stuck-1',
+      executionId: 'exec-stuck-1',
+      userId: 'user-1',
+      sessionId: 'default',
+      objective: 'Test stuck loop',
+      checkpointer,
+    });
+
+    expect(output.stopReason).toBe('STUCK_LOOP');
+    expect(output.replanCount).toBe(1);
+    expect(output.text).toContain('repeated tool-call loop');
+    expect(invokeMock).toHaveBeenCalledTimes(3);
+  });
+
   it('extracts text blocks while ignoring thinking blocks and configures LangSmith safely', () => {
     const extracted = extractTextContent([
       { type: 'thinking', thinking: 'internal chain' },
