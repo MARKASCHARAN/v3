@@ -7,6 +7,7 @@ import {
   accountabilityLogsQuerySchema,
   createAccountabilityLogSchema,
   createReminderSchema,
+  generateInterventionsSchema,
   remindersQuerySchema,
   updateAccountabilityLogSchema,
   updateReminderSchema,
@@ -20,6 +21,12 @@ router.use(requireAuth);
 router.get('/summary', controller.getSummary);
 router.get('/missed-tasks', controller.getMissedTasks);
 router.post('/missed-tasks/scan', controller.scanMissedTasks);
+router.get('/procrastination', controller.analyzeProcrastination);
+router.post(
+  '/interventions',
+  validateRequest({ body: generateInterventionsSchema }),
+  controller.generateInterventions
+);
 
 router.get('/reminders', validateRequest({ query: remindersQuerySchema }), controller.getReminders);
 router.post(

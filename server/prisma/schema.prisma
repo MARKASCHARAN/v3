@@ -21,6 +21,9 @@ model User {
   reminders            Reminder[]
   accountabilityLogs   AccountabilityLog[]
   plans                Plan[]
+  aiExecutions         AiExecution[]
+  aiToolApprovals      AiToolApproval[]
+  researchItems        ResearchItem[]
 
   @@map("users")
 }
@@ -48,6 +51,7 @@ model Goal {
   reminders          Reminder[]
   accountabilityLogs AccountabilityLog[]
   plans              Plan[]
+  researchItems      ResearchItem[]
 
   @@map("goals")
 }
@@ -143,8 +147,10 @@ model AccountabilityLog {
   taskId     String?
   goalId     String?
   type       String
+  severity   String    @default("MEDIUM")
   status     String    @default("OPEN")
   notes      String?
+  metadata   Json?
   detectedAt DateTime  @default(now())
   resolvedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -217,4 +223,65 @@ model Plan {
   goal           Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   @@map("plans")
+}
+
+model AiExecution {
+  id           String           @id @default(uuid())
+  userId       String
+  sessionId    String           @default("default")
+  prompt       String
+  status       String           @default("RUNNING")
+  provider     String?
+  model        String?
+  responseText String?
+  errorMessage String?
+  attempts     Int              @default(1)
+  stepsData    Json?
+  startedAt    DateTime         @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvals    AiToolApproval[]
+
+  @@map("ai_executions")
+}
+
+model AiToolApproval {
+  id           String      @id @default(uuid())
+  executionId  String
+  userId       String
+  toolName     String
+  toolArgs     Json
+  status       String      @default("PENDING")
+  resultData   Json?
+  errorMessage String?
+  decidedAt    DateTime?
+  executedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  execution    AiExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_tool_approvals")
+}
+
+model ResearchItem {
+  id          String   @id @default(uuid())
+  userId      String
+  goalId      String?
+  query       String
+  title       String
+  summary     String
+  keyFindings Json
+  sources     Json
+  status      String   @default("COMPLETED")
+  provider    String?
+  model       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  @@map("research_items")
 }

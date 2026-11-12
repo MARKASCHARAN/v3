@@ -57,6 +57,24 @@ export const contextQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+export const semanticSearchQuerySchema = z.object({
+  q: z.string().trim().min(1, 'Search query is required').max(1000),
+  category: memoryCategorySchema.optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  minSimilarity: z.coerce.number().min(0).max(1).default(0.3),
+});
+
+export const personalizationQuerySchema = z.object({
+  topic: z.string().trim().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(30).default(10),
+});
+
+export const backfillEmbeddingsSchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+  })
+  .default({ limit: 25 });
+
 export const memoryIdParamSchema = z.object({
   id: z.string().uuid('Invalid memory ID'),
 });

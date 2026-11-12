@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "vector";
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,

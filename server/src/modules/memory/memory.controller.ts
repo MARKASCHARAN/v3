@@ -1,7 +1,14 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { AppError } from '../../middleware/error.middleware';
-import { contextQuerySchema, conversationQuerySchema, memoryQuerySchema } from './memory.schema';
+import {
+  backfillEmbeddingsSchema,
+  contextQuerySchema,
+  conversationQuerySchema,
+  memoryQuerySchema,
+  personalizationQuerySchema,
+  semanticSearchQuerySchema,
+} from './memory.schema';
 import { MemoryService } from './memory.service';
 import {
   CreateConversationMessageInput,
@@ -33,6 +40,27 @@ export class MemoryController {
     const query = contextQuerySchema.parse(req.query);
     const bundle = await this.memoryService.getContextBundle(userId, query);
     res.status(200).json({ success: true, data: bundle });
+  };
+
+  semanticSearch = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const query = semanticSearchQuerySchema.parse(req.query);
+    const results = await this.memoryService.semanticSearch(userId, query);
+    res.status(200).json({ success: true, data: results });
+  };
+
+  backfillEmbeddings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const body = backfillEmbeddingsSchema.parse(req.body ?? {});
+    const summary = await this.memoryService.backfillEmbeddings(userId, body.limit);
+    res.status(200).json({ success: true, data: summary });
+  };
+
+  getPersonalization = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const query = personalizationQuerySchema.parse(req.query);
+    const profile = await this.memoryService.getPersonalizationContext(userId, query);
+    res.status(200).json({ success: true, data: profile });
   };
 
   createMemory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

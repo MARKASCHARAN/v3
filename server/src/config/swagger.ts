@@ -341,6 +341,22 @@ const swaggerDocument = {
         },
       },
     },
+    '/accountability/procrastination': {
+      get: {
+        summary: 'Analyze procrastination signals and compute risk score',
+        responses: {
+          '200': { description: 'Procrastination analysis returned' },
+        },
+      },
+    },
+    '/accountability/interventions': {
+      post: {
+        summary: 'Generate adaptive accountability interventions and optional reminders',
+        responses: {
+          '200': { description: 'Interventions generated' },
+        },
+      },
+    },
     '/memory': {
       get: {
         summary: 'Retrieve and search user memory entries by category, tag, or query',
@@ -383,6 +399,30 @@ const swaggerDocument = {
         },
       },
     },
+    '/memory/semantic': {
+      get: {
+        summary: 'Semantic memory retrieval via pgvector similarity search',
+        responses: {
+          '200': { description: 'Semantically matched memories returned' },
+        },
+      },
+    },
+    '/memory/embeddings/backfill': {
+      post: {
+        summary: 'Generate pgvector embeddings for existing memories missing vectors',
+        responses: {
+          '200': { description: 'Backfill summary returned' },
+        },
+      },
+    },
+    '/memory/personalization': {
+      get: {
+        summary: 'Retrieve personalized user profile, focus categories, and relevant memories',
+        responses: {
+          '200': { description: 'Personalization context returned' },
+        },
+      },
+    },
     '/memory/preferences': {
       get: {
         summary: 'List user preferences',
@@ -422,6 +462,107 @@ const swaggerDocument = {
         summary: 'Clear conversation history for a session',
         responses: {
           '200': { description: 'Conversation history cleared' },
+        },
+      },
+    },
+    '/automation/tools': {
+      get: {
+        summary: 'List registered AI tools and permission policies',
+        responses: {
+          '200': { description: 'Tools list returned' },
+        },
+      },
+    },
+    '/automation/run': {
+      post: {
+        summary: 'Run the central AI orchestrator with multi-step tool calling and approval gating',
+        responses: {
+          '200': { description: 'AI execution completed or awaiting approval' },
+        },
+      },
+    },
+    '/automation/executions': {
+      get: {
+        summary: 'List AI execution history and step traces',
+        responses: {
+          '200': { description: 'Executions returned' },
+        },
+      },
+    },
+    '/automation/executions/{id}': {
+      get: {
+        summary: 'Get a single AI execution with approval records',
+        responses: {
+          '200': { description: 'Execution returned' },
+        },
+      },
+    },
+    '/automation/approvals': {
+      get: {
+        summary: 'List tool execution approval requests',
+        responses: {
+          '200': { description: 'Approvals returned' },
+        },
+      },
+    },
+    '/automation/approvals/{id}/approve': {
+      post: {
+        summary: 'Approve and execute a pending AI tool call',
+        responses: {
+          '200': { description: 'Tool executed' },
+        },
+      },
+    },
+    '/automation/approvals/{id}/reject': {
+      post: {
+        summary: 'Reject a pending AI tool call',
+        responses: {
+          '200': { description: 'Approval rejected' },
+        },
+      },
+    },
+    '/research/search': {
+      post: {
+        summary:
+          'Conduct grounded web research, synthesize summary & key findings, and store result',
+        responses: {
+          '201': { description: 'Research completed and stored' },
+        },
+      },
+    },
+    '/research': {
+      get: {
+        summary: 'Retrieve stored research summaries and knowledge items',
+        responses: {
+          '200': { description: 'Research items returned' },
+        },
+      },
+      post: {
+        summary: 'Save a manual research summary and sources',
+        responses: {
+          '201': { description: 'Research item created' },
+        },
+      },
+    },
+    '/research/{id}': {
+      get: {
+        summary: 'Get a single research item by ID',
+        responses: {
+          '200': { description: 'Research item returned' },
+        },
+      },
+      delete: {
+        summary: 'Delete a research item by ID',
+        responses: {
+          '200': { description: 'Research item deleted' },
+        },
+      },
+    },
+    '/research/{id}/save-to-memory': {
+      post: {
+        summary: 'Promote a research item into long-term semantic memory',
+        responses: {
+          '200': { description: 'Research saved to memory' },
         },
       },
     },

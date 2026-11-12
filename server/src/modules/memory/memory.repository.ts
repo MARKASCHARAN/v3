@@ -5,6 +5,7 @@ import {
   CreateConversationMessageInput,
   CreateMemoryInput,
   MemoryQueryInput,
+  SemanticMemoryMatch,
   UpdateMemoryInput,
   UpsertPreferenceInput,
 } from './memory.types';
@@ -146,5 +147,81 @@ export class MemoryRepository {
     return prisma.conversationMessage.deleteMany({
       where: { userId, sessionId },
     });
+  }
+
+  async updateMemoryEmbedding(id: string, vectorLiteral: string) {
+    return prisma.$executeRaw`
+      UPDATE "memories"
+      SET "embedding" = ${vectorLiteral}::vector
+      WHERE "id" = ${id}
+    `;
+  }
+
+  async findMemoriesWithoutEmbedding(userId: string, limit: number) {
+    return prisma.$queryRaw<
+      Array<{
+        id: string;
+        title: string | null;
+        content: string;
+        category: string;
+        tags: string[];
+      }>
+    >`
+      SELECT "id", "title", "content", "category", "tags"
+      FROM "memories"
+      WHERE "userId" = ${userId}
+        AND "embedding" IS NULL
+      ORDER BY "createdAt" DESC
+      LIMIT ${limit}
+    `;
+  }
+
+  async findSimilarMemories(
+    userId: string,
+    vectorLiteral: string,
+    options: { category?: string; limit: number; minSimilarity: number }
+  ) {
+    const categoryClause = options.category
+      ? Prisma.sql`AND "category" = ${options.category}`
+      : Prisma.empty;
+
+    return prisma.$queryRaw<SemanticMemoryMatch[]>`
+      SELECT
+        "id",
+        "userId",
+        "title",
+        "content",
+        "category",
+        "tags",
+        "importance",
+        "createdAt",
+        "updatedAt",
+        (1 - ("embedding" <=> ${vectorLiteral}::vector))::float AS "similarity"
+      FROM "memories"
+      WHERE "userId" = ${userId}
+        AND "embedding" IS NOT NULL
+        ${categoryClause}
+        AND (1 - ("embedding" <=> ${vectorLiteral}::vector)) >= ${options.minSimilarity}
+      ORDER BY "similarity" DESC, "importance" DESC
+      LIMIT ${options.limit}
+    `;
+  }
+
+  async findPersonalizationSignals(userId: string) {
+    const [activeGoals, recentMemories] = await Promise.all([
+      prisma.goal.findMany({
+        where: { userId, status: 'ACTIVE' },
+        select: { id: true, title: true, category: true, timeframe: true, progress: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 10,
+      }),
+      prisma.memory.findMany({
+        where: { userId },
+        orderBy: [{ importance: 'desc' }, { updatedAt: 'desc' }],
+        take: 10,
+      }),
+    ]);
+
+    return { activeGoals, recentMemories };
   }
 }

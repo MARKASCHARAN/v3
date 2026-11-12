@@ -3,13 +3,16 @@ import { requireAuth } from '../../middleware/auth.middleware';
 import { validateRequest } from '../../middleware/validation.middleware';
 import { MemoryController } from './memory.controller';
 import {
+  backfillEmbeddingsSchema,
   contextQuerySchema,
   conversationQuerySchema,
   createConversationMessageSchema,
   createMemorySchema,
   memoryIdParamSchema,
   memoryQuerySchema,
+  personalizationQuerySchema,
   preferenceKeyParamSchema,
+  semanticSearchQuerySchema,
   updateMemorySchema,
   upsertPreferenceSchema,
 } from './memory.schema';
@@ -20,6 +23,21 @@ const controller = new MemoryController();
 router.use(requireAuth);
 
 router.get('/context', validateRequest({ query: contextQuerySchema }), controller.getContext);
+router.get(
+  '/semantic',
+  validateRequest({ query: semanticSearchQuerySchema }),
+  controller.semanticSearch
+);
+router.post(
+  '/embeddings/backfill',
+  validateRequest({ body: backfillEmbeddingsSchema }),
+  controller.backfillEmbeddings
+);
+router.get(
+  '/personalization',
+  validateRequest({ query: personalizationQuerySchema }),
+  controller.getPersonalization
+);
 
 router.get('/preferences', controller.getPreferences);
 router.put(

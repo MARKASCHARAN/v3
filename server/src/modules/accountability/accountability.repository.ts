@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../database/prisma';
 import {
   AccountabilityLogsQueryInput,
@@ -34,14 +35,14 @@ export class AccountabilityRepository {
     });
   }
 
-  async findOpenMissedTaskLogs(userId: string, taskIds: string[]) {
+  async findOpenLogsByTypeAndTaskIds(userId: string, type: string, taskIds: string[]) {
     if (taskIds.length === 0) {
       return [];
     }
     return prisma.accountabilityLog.findMany({
       where: {
         userId,
-        type: 'MISSED_TASK',
+        type,
         status: { in: ['OPEN', 'ACKNOWLEDGED'] },
         taskId: { in: taskIds },
       },
@@ -49,14 +50,22 @@ export class AccountabilityRepository {
     });
   }
 
-  async createLog(userId: string, data: CreateAccountabilityLogInput) {
+  async createLog(
+    userId: string,
+    data: Omit<CreateAccountabilityLogInput, 'severity'> & {
+      severity?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ) {
     return prisma.accountabilityLog.create({
       data: {
         userId,
         taskId: data.taskId,
         goalId: data.goalId,
         type: data.type,
+        severity: data.severity ?? 'MEDIUM',
         notes: data.notes,
+        metadata: data.metadata as Prisma.InputJsonValue | undefined,
       },
     });
   }
@@ -175,6 +184,53 @@ export class AccountabilityRepository {
       goals,
       pendingReminders,
       openAlerts,
+    };
+  }
+
+  async findAdaptiveSignalsSnapshot(userId: string, now: Date) {
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const [activeTasks, recentBlocks, missedTaskAlertsCount] = await Promise.all([
+      prisma.task.findMany({
+        where: {
+          userId,
+          status: { notIn: ['DONE', 'CANCELLED'] },
+        },
+        select: {
+          id: true,
+          goalId: true,
+          title: true,
+          priority: true,
+          status: true,
+          dueDate: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.timeBlock.findMany({
+        where: {
+          userId,
+          startTime: { gte: fourteenDaysAgo },
+        },
+        select: {
+          id: true,
+          taskId: true,
+          status: true,
+          endTime: true,
+        },
+      }),
+      prisma.accountabilityLog.count({
+        where: {
+          userId,
+          type: 'MISSED_TASK',
+          detectedAt: { gte: fourteenDaysAgo },
+        },
+      }),
+    ]);
+
+    return {
+      activeTasks,
+      recentBlocks,
+      missedTaskAlertsCount,
     };
   }
 }

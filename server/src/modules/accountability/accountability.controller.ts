@@ -6,6 +6,7 @@ import { AccountabilityService } from './accountability.service';
 import {
   CreateAccountabilityLogInput,
   CreateReminderInput,
+  GenerateInterventionsInput,
   UpdateAccountabilityLogInput,
   UpdateReminderInput,
 } from './accountability.types';
@@ -44,6 +45,21 @@ export class AccountabilityController {
     const userId = this.getUserId(req);
     const report = await this.accountabilityService.detectAndLogMissedTasks(userId);
     res.status(200).json({ success: true, data: report });
+  };
+
+  analyzeProcrastination = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const analysis = await this.accountabilityService.analyzeProcrastination(userId);
+    res.status(200).json({ success: true, data: analysis });
+  };
+
+  generateInterventions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const result = await this.accountabilityService.generateInterventions(
+      userId,
+      req.body as GenerateInterventionsInput
+    );
+    res.status(200).json({ success: true, data: result });
   };
 
   createReminder = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
