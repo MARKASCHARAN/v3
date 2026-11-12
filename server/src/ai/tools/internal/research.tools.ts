@@ -20,4 +20,3 @@ export const RESEARCH_TOOLS: V3ToolContract[] = [
       researchService.conductResearch(ctx.userId, input as z.infer<typeof conductResearchSchema>),
   } as V3ToolContract,
 ];
-

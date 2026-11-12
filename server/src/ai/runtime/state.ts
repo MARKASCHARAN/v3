@@ -79,6 +79,14 @@ export const V3AgentStateAnnotation = Annotation.Root({
     reducer: (_prev, next) => next,
     default: () => 60000,
   }),
+  consecutiveErrors: Annotation<number>({
+    reducer: (_prev, next) => next,
+    default: () => 0,
+  }),
+  stopReason: Annotation<string | null>({
+    reducer: (_prev, next) => next,
+    default: () => null,
+  }),
   finalResponse: Annotation<string>({
     reducer: (_prev, next) => next,
     default: () => '',

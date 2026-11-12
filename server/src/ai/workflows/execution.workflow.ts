@@ -4,13 +4,16 @@ import { BaseCheckpointSaver, Command, INTERRUPT } from '@langchain/langgraph';
 import { aiConfig } from '../../config/ai.config';
 import { buildCheckpointConfig, ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import {
-  FoundationGraphConfig,
   GraphApprovalPolicy,
   RunnableChatModel,
-  createFoundationAgentGraph,
   extractStepTracesFromMessages,
 } from '../runtime/graph-factory';
-import { AgentRole, ExecutionMode } from '../runtime/state';
+import {
+  ContextLoaderFn,
+  MainOrchestratorConfig,
+  createMainOrchestratorGraph,
+} from '../runtime/orchestrator';
+import { AgentRole, ExecutionMode, PlanStepItem } from '../runtime/state';
 import { ApprovalDecisionPayload, ExecutionStepTrace } from '../tools/tool.types';
 import { RetryOptions } from './retry.workflow';
 
@@ -28,11 +31,13 @@ export interface MultiStepWorkflowInput {
   agentRole?: AgentRole;
   mode?: ExecutionMode;
   tokenBudget?: number;
+  maxConsecutiveErrors?: number;
   checkpointNamespace?: string;
   runId?: string;
   checkpointer?: BaseCheckpointSaver;
   retryOptions?: RetryOptions;
   approvalPolicy?: GraphApprovalPolicy;
+  contextLoader?: ContextLoaderFn;
 }
 
 export interface ResumeWorkflowInput {
@@ -45,6 +50,7 @@ export interface ResumeWorkflowInput {
   checkpointer?: BaseCheckpointSaver;
   retryOptions?: RetryOptions;
   approvalPolicy?: GraphApprovalPolicy;
+  contextLoader?: ContextLoaderFn;
   decisions: Record<string, ApprovalDecisionPayload>;
 }
 
@@ -55,6 +61,8 @@ export interface MultiStepWorkflowOutput {
   checkpointThreadId: string;
   interrupted: boolean;
   pendingApprovalIds: string[];
+  stopReason?: string | null;
+  planSteps?: PlanStepItem[];
   steps: ExecutionStepTrace[];
 }
 
@@ -98,10 +106,10 @@ const extractInterruptMetadata = (
 };
 
 const compileWorkflowGraph = async (
-  config: Omit<FoundationGraphConfig, 'checkpointer'> & { checkpointer?: BaseCheckpointSaver }
+  config: Omit<MainOrchestratorConfig, 'checkpointer'> & { checkpointer?: BaseCheckpointSaver }
 ) => {
   const checkpointer = config.checkpointer ?? (await ensurePostgresCheckpointer());
-  return createFoundationAgentGraph({
+  return createMainOrchestratorGraph({
     ...config,
     checkpointer,
   });
@@ -117,6 +125,8 @@ export const runMultiStepToolWorkflow = async (
     checkpointer: input.checkpointer,
     retryOptions: input.retryOptions,
     approvalPolicy: input.approvalPolicy,
+    contextLoader: input.contextLoader,
+    maxConsecutiveErrors: input.maxConsecutiveErrors,
   });
 
   const config = buildCheckpointConfig(input.threadId, input.checkpointNamespace, input.runId);
@@ -134,8 +144,13 @@ export const runMultiStepToolWorkflow = async (
       objective: input.objective,
       activeAgent,
       messages: input.messages,
+      iterationCount: 0,
       maxIterations: input.maxSteps,
       tokenBudget,
+      consecutiveErrors: 0,
+      stopReason: null,
+      finalResponse: '',
+      error: null,
     },
     config
   );
@@ -156,6 +171,8 @@ export const runMultiStepToolWorkflow = async (
     checkpointThreadId: input.threadId,
     interrupted: interruptState.interrupted,
     pendingApprovalIds: interruptState.approvalIds,
+    stopReason: result.stopReason,
+    planSteps: result.planSteps,
     steps,
   };
 };
@@ -168,6 +185,7 @@ export const hasPendingInterruptForThread = async (input: {
   checkpointNamespace?: string;
   checkpointer?: BaseCheckpointSaver;
   approvalPolicy?: GraphApprovalPolicy;
+  contextLoader?: ContextLoaderFn;
 }): Promise<boolean> => {
   const { graph } = await compileWorkflowGraph({
     model: input.model,
@@ -175,6 +193,7 @@ export const hasPendingInterruptForThread = async (input: {
     tools: input.tools,
     checkpointer: input.checkpointer,
     approvalPolicy: input.approvalPolicy,
+    contextLoader: input.contextLoader,
   });
 
   const snapshot = await graph.getState(
@@ -195,6 +214,7 @@ export const resumeInterruptedToolWorkflow = async (
     checkpointer: input.checkpointer,
     retryOptions: input.retryOptions,
     approvalPolicy: input.approvalPolicy,
+    contextLoader: input.contextLoader,
   });
 
   const config = buildCheckpointConfig(input.threadId, input.checkpointNamespace, input.runId);
@@ -214,6 +234,8 @@ export const resumeInterruptedToolWorkflow = async (
     checkpointThreadId: input.threadId,
     interrupted: interruptState.interrupted,
     pendingApprovalIds: interruptState.approvalIds,
+    stopReason: result.stopReason,
+    planSteps: result.planSteps,
     steps,
   };
 };

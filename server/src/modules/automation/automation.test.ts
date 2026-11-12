@@ -192,6 +192,59 @@ describe('Phase 2 AI & Automation Module', () => {
         errorMessage: 'Provider unreachable',
       });
     });
+
+    it('reuses explicit threadId without duplicating prior messages and forwards tokenBudget', async () => {
+      const persistence: OrchestratorPersistence = {
+        loadContext: vi.fn().mockResolvedValue({
+          preferences: [],
+          memories: [],
+          recentMessages: [
+            { role: 'USER', content: 'Old user msg' },
+            { role: 'ASSISTANT', content: 'Old assistant msg' },
+          ],
+          overdueTasksCount: 0,
+          pendingRemindersCount: 0,
+        }),
+        createExecution: vi.fn().mockResolvedValue({ id: 'exec-cont' }),
+        saveConversationMessage: vi.fn().mockResolvedValue(undefined),
+        createPendingApproval: vi.fn(),
+        completeExecution: vi.fn().mockImplementation(async (_id, data) => ({
+          id: 'exec-cont',
+          ...data,
+        })),
+      };
+
+      const executor: WorkflowExecutor = vi.fn().mockResolvedValue({
+        provider: 'google',
+        model: 'gemini-2.5-flash',
+        text: 'Continued cleanly.',
+        attempts: 1,
+        tokensUsed: 42,
+        checkpointThreadId: 'custom-thread-1',
+        interrupted: false,
+        pendingApprovalIds: [],
+        steps: [],
+      });
+
+      const orchestrator = new AssistantOrchestrator(persistence, executor);
+      await orchestrator.run({
+        userId: 'user-1',
+        prompt: 'Follow-up question',
+        sessionId: 'default',
+        threadId: 'custom-thread-1',
+        tokenBudget: 12000,
+        maxSteps: 5,
+        allowAutoApproveWrites: false,
+      });
+
+      expect(executor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          threadId: 'custom-thread-1',
+          tokenBudget: 12000,
+          messages: [expect.objectContaining({ content: 'Follow-up question' })],
+        })
+      );
+    });
   });
 
   describe('AutomationService Approvals & Routes', () => {

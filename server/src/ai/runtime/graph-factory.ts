@@ -46,7 +46,15 @@ export interface FoundationGraphConfig {
   approvalPolicy?: GraphApprovalPolicy;
 }
 
-const parseToolOutputSafely = (rawContent: unknown): unknown => {
+export interface ToolCallExecutionBatchResult {
+  toolMessages: ToolMessage[];
+  observations: string[];
+  hadErrors: boolean;
+  succeededCount: number;
+  pendingApprovalIds: string[];
+}
+
+export const parseToolOutputSafely = (rawContent: unknown): unknown => {
   if (typeof rawContent !== 'string') {
     return rawContent;
   }
@@ -112,6 +120,372 @@ export const extractStepTracesFromMessages = (
   return traces;
 };
 
+export const evaluateGraphToolPermission = (
+  approvalPolicy: GraphApprovalPolicy | undefined,
+  toolName: string
+) => {
+  if (!approvalPolicy) {
+    return { decision: 'ALLOW' as const, reason: 'No approval policy configured.' };
+  }
+  const contract = tryGetRegisteredTool(toolName);
+  return evaluateToolPermission({
+    role: approvalPolicy.agentRole,
+    toolName,
+    riskLevel: contract?.riskLevel ?? 'INTERNAL_WRITE',
+    allowAutoApproveWrites: approvalPolicy.allowAutoApproveWrites,
+  });
+};
+
+export const executeSingleGraphToolCall = async (
+  toolCall: { id?: string; name: string; args: Record<string, unknown> },
+  toolByName: Map<string, StructuredToolInterface>,
+  approvalPolicy: GraphApprovalPolicy | undefined,
+  options: { bypassApprovalCheck?: boolean; idempotencyKey?: string } = {}
+): Promise<{ message: ToolMessage; observation: string; isError: boolean }> => {
+  const toolCallId = toolCall.id ?? `${toolCall.name}_${Date.now()}`;
+  const targetTool = toolByName.get(toolCall.name);
+  const contract = tryGetRegisteredTool(toolCall.name);
+
+  if (!targetTool && !contract) {
+    return {
+      message: new ToolMessage({
+        tool_call_id: toolCallId,
+        name: toolCall.name,
+        content: JSON.stringify({
+          status: 'ERROR',
+          toolName: toolCall.name,
+          error: `Tool "${toolCall.name}" is not available`,
+        }),
+      }),
+      observation: `Tool error: unknown tool ${toolCall.name}`,
+      isError: true,
+    };
+  }
+
+  try {
+    let content: string;
+    if (approvalPolicy && contract) {
+      const result = await executeGuardedTool(
+        contract,
+        toolCall.args,
+        {
+          userId: approvalPolicy.userId,
+          executionId: approvalPolicy.executionId,
+          agentRole: approvalPolicy.agentRole,
+          idempotencyKey: options.idempotencyKey,
+        },
+        {
+          allowAutoApproveWrites: approvalPolicy.allowAutoApproveWrites,
+          bypassApprovalCheck: options.bypassApprovalCheck,
+        }
+      );
+      content = JSON.stringify({
+        status: 'EXECUTED',
+        toolName: toolCall.name,
+        data: result,
+      });
+    } else if (targetTool) {
+      const rawOutput = await targetTool.invoke(toolCall.args);
+      content = typeof rawOutput === 'string' ? rawOutput : JSON.stringify(rawOutput);
+    } else {
+      return {
+        message: new ToolMessage({
+          tool_call_id: toolCallId,
+          name: toolCall.name,
+          content: JSON.stringify({ status: 'ERROR', error: 'Tool unavailable' }),
+        }),
+        observation: `Tool unavailable: ${toolCall.name}`,
+        isError: true,
+      };
+    }
+
+    return {
+      message: new ToolMessage({
+        tool_call_id: toolCallId,
+        name: toolCall.name,
+        content,
+      }),
+      observation: `Executed ${toolCall.name}`,
+      isError: false,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Tool execution failed';
+    return {
+      message: new ToolMessage({
+        tool_call_id: toolCallId,
+        name: toolCall.name,
+        content: JSON.stringify({
+          status: 'ERROR',
+          toolName: toolCall.name,
+          error: errorMessage,
+        }),
+      }),
+      observation: `Tool failed (${toolCall.name}): ${errorMessage}`,
+      isError: true,
+    };
+  }
+};
+
+export const runStandardToolsBatch = async (
+  state: V3AgentState,
+  toolByName: Map<string, StructuredToolInterface>,
+  approvalPolicy: GraphApprovalPolicy | undefined
+): Promise<ToolCallExecutionBatchResult> => {
+  const latestMessage = state.messages[state.messages.length - 1];
+  if (!latestMessage || !isAIMessage(latestMessage) || !latestMessage.tool_calls?.length) {
+    return {
+      toolMessages: [],
+      observations: [],
+      hadErrors: false,
+      succeededCount: 0,
+      pendingApprovalIds: [],
+    };
+  }
+
+  const toolMessages: ToolMessage[] = [];
+  const observations: string[] = [];
+  let hadErrors = false;
+  let succeededCount = 0;
+
+  for (const toolCall of latestMessage.tool_calls) {
+    const permission = evaluateGraphToolPermission(approvalPolicy, toolCall.name);
+    if (permission.decision === 'DENY') {
+      const toolCallId = toolCall.id ?? `${toolCall.name}_${Date.now()}`;
+      toolMessages.push(
+        new ToolMessage({
+          tool_call_id: toolCallId,
+          name: toolCall.name,
+          content: JSON.stringify({
+            status: 'DENIED',
+            toolName: toolCall.name,
+            error: permission.reason,
+          }),
+        })
+      );
+      observations.push(`Denied ${toolCall.name}: ${permission.reason}`);
+      hadErrors = true;
+      continue;
+    }
+
+    const executed = await executeSingleGraphToolCall(toolCall, toolByName, approvalPolicy);
+    toolMessages.push(executed.message);
+    observations.push(executed.observation);
+    if (executed.isError) {
+      hadErrors = true;
+    } else {
+      succeededCount += 1;
+    }
+  }
+
+  return {
+    toolMessages,
+    observations,
+    hadErrors,
+    succeededCount,
+    pendingApprovalIds: [],
+  };
+};
+
+export const runApprovalGateBatch = async (
+  state: V3AgentState,
+  toolByName: Map<string, StructuredToolInterface>,
+  approvalPolicy: GraphApprovalPolicy
+): Promise<ToolCallExecutionBatchResult> => {
+  const latestMessage = state.messages[state.messages.length - 1];
+  if (!latestMessage || !isAIMessage(latestMessage) || !latestMessage.tool_calls?.length) {
+    return {
+      toolMessages: [],
+      observations: [],
+      hadErrors: false,
+      succeededCount: 0,
+      pendingApprovalIds: [],
+    };
+  }
+
+  const ttlMs = approvalPolicy.approvalTtlMs ?? aiConfig.defaultApprovalTtlMs;
+  const pendingEntries: Array<{
+    approvalId: string;
+    toolCallId: string;
+    toolName: string;
+    toolArgs: Record<string, unknown>;
+    riskLevel: string;
+    idempotencyKey: string;
+  }> = [];
+  const approvalByCallId = new Map<string, (typeof pendingEntries)[number]>();
+
+  for (let index = 0; index < latestMessage.tool_calls.length; index++) {
+    const call = latestMessage.tool_calls[index];
+    if (!call) {
+      continue;
+    }
+    const permission = evaluateGraphToolPermission(approvalPolicy, call.name);
+    if (permission.decision !== 'REQUIRE_APPROVAL') {
+      continue;
+    }
+
+    const toolCallId = call.id ?? `${call.name}_${index}`;
+    const idempotencyKey = `${state.executionId}:${toolCallId}`;
+    const contract = tryGetRegisteredTool(call.name);
+    const riskLevel = contract?.riskLevel ?? 'INTERNAL_WRITE';
+
+    const created = await approvalPolicy.createPendingApproval({
+      toolCallId,
+      toolName: call.name,
+      toolArgs: call.args as Record<string, unknown>,
+      riskLevel,
+      agentRole: approvalPolicy.agentRole,
+      idempotencyKey,
+      expiresAt: new Date(Date.now() + ttlMs),
+    });
+
+    const entry = {
+      approvalId: created.id,
+      toolCallId,
+      toolName: call.name,
+      toolArgs: call.args as Record<string, unknown>,
+      riskLevel,
+      idempotencyKey,
+    };
+    pendingEntries.push(entry);
+    approvalByCallId.set(toolCallId, entry);
+  }
+
+  const resumeDecisions = interrupt({
+    type: 'TOOL_APPROVAL_REQUIRED',
+    executionId: state.executionId,
+    threadId: state.threadId,
+    approvals: pendingEntries,
+  }) as Record<string, ApprovalDecisionPayload> | undefined;
+
+  const toolMessages: ToolMessage[] = [];
+  const observations: string[] = [];
+  let hadErrors = false;
+  let succeededCount = 0;
+
+  for (let index = 0; index < latestMessage.tool_calls.length; index++) {
+    const call = latestMessage.tool_calls[index];
+    if (!call) {
+      continue;
+    }
+
+    const toolCallId = call.id ?? `${call.name}_${index}`;
+    const permission = evaluateGraphToolPermission(approvalPolicy, call.name);
+
+    if (permission.decision === 'DENY') {
+      toolMessages.push(
+        new ToolMessage({
+          tool_call_id: toolCallId,
+          name: call.name,
+          content: JSON.stringify({
+            status: 'DENIED',
+            toolName: call.name,
+            error: permission.reason,
+          }),
+        })
+      );
+      observations.push(`Denied ${call.name}`);
+      hadErrors = true;
+      continue;
+    }
+
+    if (permission.decision === 'ALLOW') {
+      const executed = await executeSingleGraphToolCall(call, toolByName, approvalPolicy);
+      toolMessages.push(executed.message);
+      observations.push(executed.observation);
+      if (executed.isError) {
+        hadErrors = true;
+      } else {
+        succeededCount += 1;
+      }
+      continue;
+    }
+
+    const pending = approvalByCallId.get(toolCallId);
+    const approvalId = pending?.approvalId ?? toolCallId;
+    const decisionPayload = resumeDecisions?.[approvalId] ?? resumeDecisions?.[toolCallId];
+
+    if (
+      !decisionPayload ||
+      decisionPayload.decision === 'REJECTED' ||
+      decisionPayload.decision === 'EXPIRED'
+    ) {
+      const status = decisionPayload?.decision ?? 'REJECTED';
+      const reason = decisionPayload?.reason ?? 'Human approval rejected.';
+      toolMessages.push(
+        new ToolMessage({
+          tool_call_id: toolCallId,
+          name: call.name,
+          content: JSON.stringify({
+            status,
+            approvalId,
+            toolName: call.name,
+            reason,
+          }),
+        })
+      );
+      observations.push(`${call.name} ${status.toLowerCase()}: ${reason}`);
+      continue;
+    }
+
+    if (decisionPayload.decision === 'FAILED') {
+      const errorReason = decisionPayload.reason ?? 'Approved tool execution failed.';
+      toolMessages.push(
+        new ToolMessage({
+          tool_call_id: toolCallId,
+          name: call.name,
+          content: JSON.stringify({
+            status: 'FAILED',
+            approvalId,
+            toolName: call.name,
+            error: errorReason,
+          }),
+        })
+      );
+      observations.push(`${call.name} failed: ${errorReason}`);
+      hadErrors = true;
+      continue;
+    }
+
+    if (decisionPayload.decision === 'EXECUTED') {
+      toolMessages.push(
+        new ToolMessage({
+          tool_call_id: toolCallId,
+          name: call.name,
+          content: JSON.stringify({
+            status: 'EXECUTED',
+            approvalId,
+            toolName: call.name,
+            data: decisionPayload.result ?? null,
+          }),
+        })
+      );
+      observations.push(`Executed approved tool ${call.name}`);
+      succeededCount += 1;
+      continue;
+    }
+
+    const executed = await executeSingleGraphToolCall(call, toolByName, approvalPolicy, {
+      bypassApprovalCheck: true,
+      idempotencyKey: pending?.idempotencyKey,
+    });
+    toolMessages.push(executed.message);
+    observations.push(executed.observation);
+    if (executed.isError) {
+      hadErrors = true;
+    } else {
+      succeededCount += 1;
+    }
+  }
+
+  return {
+    toolMessages,
+    observations,
+    hadErrors,
+    succeededCount,
+    pendingApprovalIds: pendingEntries.map((entry) => entry.approvalId),
+  };
+};
+
 export const createFoundationAgentGraph = (config: FoundationGraphConfig) => {
   const runnableModel =
     config.tools.length > 0 && config.model.bindTools
@@ -123,96 +497,6 @@ export const createFoundationAgentGraph = (config: FoundationGraphConfig) => {
   );
 
   let totalRetryAttempts = 0;
-
-  const evaluateCallPermission = (toolName: string) => {
-    if (!config.approvalPolicy) {
-      return { decision: 'ALLOW' as const, reason: 'No approval policy configured.' };
-    }
-    const contract = tryGetRegisteredTool(toolName);
-    return evaluateToolPermission({
-      role: config.approvalPolicy.agentRole,
-      toolName,
-      riskLevel: contract?.riskLevel ?? 'INTERNAL_WRITE',
-      allowAutoApproveWrites: config.approvalPolicy.allowAutoApproveWrites,
-    });
-  };
-
-  const executeSingleToolCall = async (
-    toolCall: { id?: string; name: string; args: Record<string, unknown> },
-    options: { bypassApprovalCheck?: boolean; idempotencyKey?: string } = {}
-  ): Promise<{ message: ToolMessage; observation: string }> => {
-    const toolCallId = toolCall.id ?? `${toolCall.name}_${Date.now()}`;
-    const targetTool = toolByName.get(toolCall.name);
-    const contract = tryGetRegisteredTool(toolCall.name);
-
-    if (!targetTool && !contract) {
-      return {
-        message: new ToolMessage({
-          tool_call_id: toolCallId,
-          name: toolCall.name,
-          content: JSON.stringify({
-            status: 'ERROR',
-            toolName: toolCall.name,
-            error: `Tool "${toolCall.name}" is not available`,
-          }),
-        }),
-        observation: `Tool error: unknown tool ${toolCall.name}`,
-      };
-    }
-
-    try {
-      let content: string;
-      if (config.approvalPolicy && contract) {
-        const result = await executeGuardedTool(
-          contract,
-          toolCall.args,
-          {
-            userId: config.approvalPolicy.userId,
-            executionId: config.approvalPolicy.executionId,
-            agentRole: config.approvalPolicy.agentRole,
-            idempotencyKey: options.idempotencyKey,
-          },
-          {
-            allowAutoApproveWrites: config.approvalPolicy.allowAutoApproveWrites,
-            bypassApprovalCheck: options.bypassApprovalCheck,
-          }
-        );
-        content = JSON.stringify({
-          status: 'EXECUTED',
-          toolName: toolCall.name,
-          data: result,
-        });
-      } else if (targetTool) {
-        const rawOutput = await targetTool.invoke(toolCall.args);
-        content = typeof rawOutput === 'string' ? rawOutput : JSON.stringify(rawOutput);
-      } else {
-        content = JSON.stringify({ status: 'ERROR', error: 'Tool unavailable' });
-      }
-
-      return {
-        message: new ToolMessage({
-          tool_call_id: toolCallId,
-          name: toolCall.name,
-          content,
-        }),
-        observation: `Executed ${toolCall.name}`,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Tool execution failed';
-      return {
-        message: new ToolMessage({
-          tool_call_id: toolCallId,
-          name: toolCall.name,
-          content: JSON.stringify({
-            status: 'ERROR',
-            toolName: toolCall.name,
-            error: errorMessage,
-          }),
-        }),
-        observation: `Tool failed (${toolCall.name}): ${errorMessage}`,
-      };
-    }
-  };
 
   const reasonNode = async (state: V3AgentState) => {
     const promptMessages: BaseMessage[] = [
@@ -238,219 +522,22 @@ export const createFoundationAgentGraph = (config: FoundationGraphConfig) => {
   };
 
   const toolsNode = async (state: V3AgentState) => {
-    const latestMessage = state.messages[state.messages.length - 1];
-    if (!latestMessage || !isAIMessage(latestMessage) || !latestMessage.tool_calls?.length) {
-      return {};
-    }
-
-    const toolMessages: ToolMessage[] = [];
-    const observations: string[] = [];
-
-    for (const toolCall of latestMessage.tool_calls) {
-      const permission = evaluateCallPermission(toolCall.name);
-      if (permission.decision === 'DENY') {
-        const toolCallId = toolCall.id ?? `${toolCall.name}_${Date.now()}`;
-        toolMessages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            name: toolCall.name,
-            content: JSON.stringify({
-              status: 'DENIED',
-              toolName: toolCall.name,
-              error: permission.reason,
-            }),
-          })
-        );
-        observations.push(`Denied ${toolCall.name}: ${permission.reason}`);
-        continue;
-      }
-
-      const executed = await executeSingleToolCall(toolCall);
-      toolMessages.push(executed.message);
-      observations.push(executed.observation);
-    }
-
+    const batch = await runStandardToolsBatch(state, toolByName, config.approvalPolicy);
     return {
-      messages: toolMessages,
-      observations,
+      messages: batch.toolMessages,
+      observations: batch.observations,
     };
   };
 
   const approvalGateNode = async (state: V3AgentState) => {
-    const latestMessage = state.messages[state.messages.length - 1];
-    if (!latestMessage || !isAIMessage(latestMessage) || !latestMessage.tool_calls?.length) {
+    if (!config.approvalPolicy) {
       return {};
     }
-
-    const policy = config.approvalPolicy;
-    if (!policy) {
-      return {};
-    }
-
-    const ttlMs = policy.approvalTtlMs ?? aiConfig.defaultApprovalTtlMs;
-    const pendingEntries: Array<{
-      approvalId: string;
-      toolCallId: string;
-      toolName: string;
-      toolArgs: Record<string, unknown>;
-      riskLevel: string;
-      idempotencyKey: string;
-    }> = [];
-    const approvalByCallId = new Map<string, (typeof pendingEntries)[number]>();
-
-    for (let index = 0; index < latestMessage.tool_calls.length; index++) {
-      const call = latestMessage.tool_calls[index];
-      if (!call) {
-        continue;
-      }
-      const permission = evaluateCallPermission(call.name);
-      if (permission.decision !== 'REQUIRE_APPROVAL') {
-        continue;
-      }
-
-      const toolCallId = call.id ?? `${call.name}_${index}`;
-      const idempotencyKey = `${state.executionId}:${toolCallId}`;
-      const contract = tryGetRegisteredTool(call.name);
-      const riskLevel = contract?.riskLevel ?? 'INTERNAL_WRITE';
-
-      const created = await policy.createPendingApproval({
-        toolCallId,
-        toolName: call.name,
-        toolArgs: call.args as Record<string, unknown>,
-        riskLevel,
-        agentRole: policy.agentRole,
-        idempotencyKey,
-        expiresAt: new Date(Date.now() + ttlMs),
-      });
-
-      const entry = {
-        approvalId: created.id,
-        toolCallId,
-        toolName: call.name,
-        toolArgs: call.args as Record<string, unknown>,
-        riskLevel,
-        idempotencyKey,
-      };
-      pendingEntries.push(entry);
-      approvalByCallId.set(toolCallId, entry);
-    }
-
-    const resumeDecisions = interrupt({
-      type: 'TOOL_APPROVAL_REQUIRED',
-      executionId: state.executionId,
-      threadId: state.threadId,
-      approvals: pendingEntries,
-    }) as Record<string, ApprovalDecisionPayload> | undefined;
-
-    const toolMessages: ToolMessage[] = [];
-    const observations: string[] = [];
-
-    for (let index = 0; index < latestMessage.tool_calls.length; index++) {
-      const call = latestMessage.tool_calls[index];
-      if (!call) {
-        continue;
-      }
-
-      const toolCallId = call.id ?? `${call.name}_${index}`;
-      const permission = evaluateCallPermission(call.name);
-
-      if (permission.decision === 'DENY') {
-        toolMessages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            name: call.name,
-            content: JSON.stringify({
-              status: 'DENIED',
-              toolName: call.name,
-              error: permission.reason,
-            }),
-          })
-        );
-        observations.push(`Denied ${call.name}`);
-        continue;
-      }
-
-      if (permission.decision === 'ALLOW') {
-        const executed = await executeSingleToolCall(call);
-        toolMessages.push(executed.message);
-        observations.push(executed.observation);
-        continue;
-      }
-
-      const pending = approvalByCallId.get(toolCallId);
-      const approvalId = pending?.approvalId ?? toolCallId;
-      const decisionPayload = resumeDecisions?.[approvalId] ?? resumeDecisions?.[toolCallId];
-
-      if (
-        !decisionPayload ||
-        decisionPayload.decision === 'REJECTED' ||
-        decisionPayload.decision === 'EXPIRED'
-      ) {
-        const status = decisionPayload?.decision ?? 'REJECTED';
-        const reason = decisionPayload?.reason ?? 'Human approval rejected.';
-        toolMessages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            name: call.name,
-            content: JSON.stringify({
-              status,
-              approvalId,
-              toolName: call.name,
-              reason,
-            }),
-          })
-        );
-        observations.push(`${call.name} ${status.toLowerCase()}: ${reason}`);
-        continue;
-      }
-
-      if (decisionPayload.decision === 'FAILED') {
-        const errorReason = decisionPayload.reason ?? 'Approved tool execution failed.';
-        toolMessages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            name: call.name,
-            content: JSON.stringify({
-              status: 'FAILED',
-              approvalId,
-              toolName: call.name,
-              error: errorReason,
-            }),
-          })
-        );
-        observations.push(`${call.name} failed: ${errorReason}`);
-        continue;
-      }
-
-      if (decisionPayload.decision === 'EXECUTED') {
-        toolMessages.push(
-          new ToolMessage({
-            tool_call_id: toolCallId,
-            name: call.name,
-            content: JSON.stringify({
-              status: 'EXECUTED',
-              approvalId,
-              toolName: call.name,
-              data: decisionPayload.result ?? null,
-            }),
-          })
-        );
-        observations.push(`Executed approved tool ${call.name}`);
-        continue;
-      }
-
-      const executed = await executeSingleToolCall(call, {
-        bypassApprovalCheck: true,
-        idempotencyKey: pending?.idempotencyKey,
-      });
-      toolMessages.push(executed.message);
-      observations.push(executed.observation);
-    }
-
+    const batch = await runApprovalGateBatch(state, toolByName, config.approvalPolicy);
     return {
-      messages: toolMessages,
-      observations,
-      pendingApprovalIds: pendingEntries.map((entry) => entry.approvalId),
+      messages: batch.toolMessages,
+      observations: batch.observations,
+      pendingApprovalIds: batch.pendingApprovalIds,
     };
   };
 
@@ -461,6 +548,7 @@ export const createFoundationAgentGraph = (config: FoundationGraphConfig) => {
         : 'Execution stopped after reaching the maximum reasoning iterations.';
 
     return {
+      stopReason: state.tokensUsed >= state.tokenBudget ? 'BUDGET_EXCEEDED' : 'MAX_ITERATIONS',
       finalResponse: state.finalResponse || reason,
     };
   };
@@ -482,7 +570,9 @@ export const createFoundationAgentGraph = (config: FoundationGraphConfig) => {
 
     if (config.approvalPolicy) {
       const requiresApproval = toolCalls.some(
-        (call) => evaluateCallPermission(call.name).decision === 'REQUIRE_APPROVAL'
+        (call) =>
+          evaluateGraphToolPermission(config.approvalPolicy, call.name).decision ===
+          'REQUIRE_APPROVAL'
       );
       if (requiresApproval) {
         return 'approval_gate';

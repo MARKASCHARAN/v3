@@ -479,10 +479,10 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Wire LangGraph `interrupt()` and `Command({ resume })` into `approvalGateNode` and `/api/v1/automation/approvals/:id/approve|reject` with `expiresAt` expiry support (`20261112005424_extend_tool_approvals_for_risk_and_idempotency`).
 - [x] Test invalid payloads, cross-user isolation, duplicate idempotency keys, expiry rejection, and live `PostgresSaver` approval pause/resume.
 
-### Milestone `2.3` — Main Orchestrator
-- Build `server/src/ai/runtime/orchestrator.ts` implementing the 8-step adaptive loop (Receive → Context → Reason/Plan → Select Agents/Tools → Execute → Observe → Evaluate → Adapt).
-- Integrate `AssistantOrchestrator` HTTP interface (`/api/v1/automation/run`) cleanly with `orchestrator.ts` and checkpoint resume.
-- Add token budget guard, max-iteration circuit breaker, and fallback summary generation.
+### Milestone `2.3` — Main Orchestrator (Completed)
+- [x] Build `server/src/ai/runtime/orchestrator.ts` implementing the 8-step adaptive loop (Receive → Context → Reason/Plan → Select Agents/Tools → Execute → Observe → Evaluate → Adapt).
+- [x] Integrate `AssistantOrchestrator` HTTP interface (`/api/v1/automation/run`) cleanly with `orchestrator.ts`, optional thread continuation, and checkpoint resume.
+- [x] Add token budget guard (`BUDGET_EXCEEDED`), max-iteration/consecutive-error circuit breaker (`CIRCUIT_BREAKER`), and fallback summary generation.
 
 ### Milestone `2.4` — Specialist Agents
 - Implement subgraph/specialist modules in `server/src/ai/agents/`:
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.3` (Main Orchestrator)** by implementing `server/src/ai/runtime/orchestrator.ts` (8-step adaptive Receive -> Context -> Reason/Plan -> Select -> Execute -> Observe -> Evaluate -> Adapt loop with token budget guard, iteration circuit breaker, and fallback summary generation) integrated with `AssistantOrchestrator`.
+1. Begin **Milestone `2.4` (Specialist Agents)** by creating scoped specialist agent modules under `server/src/ai/agents/` (`goal-planning`, `task`, `scheduling`, `research`, `memory`, `accountability`) bound to their respective `AgentPermissionProfile` and prompt templates.
 

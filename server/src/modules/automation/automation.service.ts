@@ -43,6 +43,8 @@ export class AutomationService {
       userId,
       prompt: input.prompt,
       sessionId: input.sessionId,
+      threadId: input.threadId,
+      tokenBudget: input.tokenBudget,
       provider: input.provider,
       modelId: input.modelId,
       maxSteps: input.maxSteps,

@@ -62,4 +62,3 @@ export const SCHEDULING_TOOLS: V3ToolContract[] = [
       schedulingService.createTimeBlock(ctx.userId, input as z.infer<typeof createTimeBlockSchema>),
   } as V3ToolContract,
 ];
-

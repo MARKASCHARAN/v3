@@ -8,7 +8,8 @@ import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
 import { AiProviderName, resolveChatModel } from '../providers/model-router';
 import { ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import { GraphApprovalPolicy } from '../runtime/graph-factory';
-import { AgentRole } from '../runtime/state';
+import { ContextLoaderFn } from '../runtime/orchestrator';
+import { AgentRole, RetrievedContextSlice } from '../runtime/state';
 import { buildLangChainTools } from '../tools/registry';
 import {
   ApprovalDecisionPayload,
@@ -26,6 +27,8 @@ export interface RunAssistantWorkflowParams {
   userId: string;
   prompt: string;
   sessionId: string;
+  threadId?: string;
+  tokenBudget?: number;
   provider?: AiProviderName;
   modelId?: string;
   maxSteps: number;
@@ -48,6 +51,7 @@ export type WorkflowExecutor = (input: {
   tokenBudget: number;
   langsmithTraceId?: string;
   approvalPolicy: GraphApprovalPolicy;
+  contextLoader?: ContextLoaderFn;
 }) => Promise<
   MultiStepWorkflowOutput & { provider: string; model: string; langsmithTraceId?: string }
 >;
@@ -74,6 +78,7 @@ const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
     tokenBudget: input.tokenBudget,
     runId: input.langsmithTraceId,
     approvalPolicy: input.approvalPolicy,
+    contextLoader: input.contextLoader,
   });
 
   return {
@@ -84,17 +89,17 @@ const defaultWorkflowExecutor: WorkflowExecutor = async (input) => {
   };
 };
 
+export interface AssistantLoadedContext {
+  preferences: Array<{ key: string; value: string }>;
+  memories: Array<{ id?: string; title: string | null; content: string; category: string }>;
+  recentMessages: Array<{ role: string; content: string }>;
+  overdueTasksCount: number;
+  pendingRemindersCount: number;
+  activeGoalsCount?: number;
+}
+
 export interface OrchestratorPersistence {
-  loadContext(
-    userId: string,
-    sessionId: string
-  ): Promise<{
-    preferences: Array<{ key: string; value: string }>;
-    memories: Array<{ title: string | null; content: string; category: string }>;
-    recentMessages: Array<{ role: string; content: string }>;
-    overdueTasksCount: number;
-    pendingRemindersCount: number;
-  }>;
+  loadContext(userId: string, sessionId: string): Promise<AssistantLoadedContext>;
   createExecution(data: {
     userId: string;
     sessionId: string;
@@ -139,39 +144,64 @@ export interface OrchestratorPersistence {
   ): Promise<unknown>;
 }
 
+const mapLoadedContextToSlice = (context: AssistantLoadedContext): RetrievedContextSlice => ({
+  preferences: context.preferences,
+  facts: context.memories.map((memory, index) => ({
+    id: memory.id ?? `mem-${index}`,
+    title: memory.title,
+    content: memory.content,
+    source: memory.category,
+    score: 1,
+  })),
+  structuredMetrics: {
+    overdueTasksCount: context.overdueTasksCount,
+    pendingRemindersCount: context.pendingRemindersCount,
+    activeGoalsCount: context.activeGoalsCount ?? 0,
+  },
+});
+
 const prismaPersistence: OrchestratorPersistence = {
   async loadContext(userId, sessionId) {
     const now = new Date();
-    const [preferences, memories, recentMessages, overdueTasksCount, pendingRemindersCount] =
-      await Promise.all([
-        prisma.userPreference.findMany({
-          where: { userId },
-          select: { key: true, value: true },
-          take: 25,
-        }),
-        prisma.memory.findMany({
-          where: { userId },
-          select: { title: true, content: true, category: true },
-          orderBy: [{ importance: 'desc' }, { updatedAt: 'desc' }],
-          take: 20,
-        }),
-        prisma.conversationMessage.findMany({
-          where: { userId, sessionId },
-          select: { role: true, content: true },
-          orderBy: { createdAt: 'asc' },
-          take: 20,
-        }),
-        prisma.task.count({
-          where: {
-            userId,
-            dueDate: { lt: now },
-            status: { notIn: ['DONE', 'CANCELLED'] },
-          },
-        }),
-        prisma.reminder.count({
-          where: { userId, status: 'PENDING' },
-        }),
-      ]);
+    const [
+      preferences,
+      memories,
+      recentMessages,
+      overdueTasksCount,
+      pendingRemindersCount,
+      activeGoalsCount,
+    ] = await Promise.all([
+      prisma.userPreference.findMany({
+        where: { userId },
+        select: { key: true, value: true },
+        take: 25,
+      }),
+      prisma.memory.findMany({
+        where: { userId },
+        select: { id: true, title: true, content: true, category: true },
+        orderBy: [{ importance: 'desc' }, { updatedAt: 'desc' }],
+        take: 20,
+      }),
+      prisma.conversationMessage.findMany({
+        where: { userId, sessionId },
+        select: { role: true, content: true },
+        orderBy: { createdAt: 'asc' },
+        take: 20,
+      }),
+      prisma.task.count({
+        where: {
+          userId,
+          dueDate: { lt: now },
+          status: { notIn: ['DONE', 'CANCELLED'] },
+        },
+      }),
+      prisma.reminder.count({
+        where: { userId, status: 'PENDING' },
+      }),
+      prisma.goal.count({
+        where: { userId, status: 'ACTIVE' },
+      }),
+    ]);
 
     return {
       preferences,
@@ -179,6 +209,7 @@ const prismaPersistence: OrchestratorPersistence = {
       recentMessages,
       overdueTasksCount,
       pendingRemindersCount,
+      activeGoalsCount,
     };
   },
 
@@ -271,9 +302,10 @@ export class AssistantOrchestrator {
 
   async run(params: RunAssistantWorkflowParams) {
     const langsmithEnabled = configureLangSmithRuntime();
-    const threadId = `${params.sessionId}:${randomUUID()}`;
+    const isThreadContinuation = Boolean(params.threadId?.trim());
+    const threadId = params.threadId?.trim() || `${params.sessionId}:${randomUUID()}`;
     const agentRole: AgentRole = 'MAIN_ORCHESTRATOR';
-    const tokenBudget = aiConfig.defaultTokenBudget;
+    const tokenBudget = params.tokenBudget ?? aiConfig.defaultTokenBudget;
     const langsmithTraceId = langsmithEnabled ? randomUUID() : undefined;
 
     const context = await this.persistence.loadContext(params.userId, params.sessionId);
@@ -304,11 +336,13 @@ export class AssistantOrchestrator {
       pendingRemindersCount: context.pendingRemindersCount,
     });
 
-    const historyMessages: BaseMessage[] = context.recentMessages
-      .filter((msg) => msg.role === 'USER' || msg.role === 'ASSISTANT')
-      .map((msg) =>
-        msg.role === 'USER' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
-      );
+    const historyMessages: BaseMessage[] = isThreadContinuation
+      ? []
+      : context.recentMessages
+          .filter((msg) => msg.role === 'USER' || msg.role === 'ASSISTANT')
+          .map((msg) =>
+            msg.role === 'USER' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
+          );
 
     const messages: BaseMessage[] = [...historyMessages, new HumanMessage(params.prompt)];
 
@@ -340,6 +374,8 @@ export class AssistantOrchestrator {
       },
     });
 
+    const contextLoader: ContextLoaderFn = async () => mapLoadedContextToSlice(context);
+
     try {
       const output = await this.workflowExecutor({
         provider: params.provider,
@@ -356,6 +392,7 @@ export class AssistantOrchestrator {
         agentRole,
         tokenBudget,
         langsmithTraceId,
+        contextLoader,
         approvalPolicy: {
           agentRole,
           userId: params.userId,
@@ -456,6 +493,8 @@ export class AssistantOrchestrator {
       createPendingApproval: createApprovalRecord,
     };
 
+    const contextLoader: ContextLoaderFn = async () => mapLoadedContextToSlice(context);
+
     const canResume = await hasPendingInterruptForThread({
       model: descriptor.model,
       system,
@@ -463,6 +502,7 @@ export class AssistantOrchestrator {
       threadId: params.threadId,
       checkpointer,
       approvalPolicy,
+      contextLoader,
     });
 
     if (!canResume) {
@@ -477,6 +517,7 @@ export class AssistantOrchestrator {
       checkpointer,
       decisions: params.decisions,
       approvalPolicy,
+      contextLoader,
     });
 
     const status = output.interrupted ? 'AWAITING_APPROVAL' : 'COMPLETED';

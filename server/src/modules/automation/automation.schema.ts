@@ -20,6 +20,8 @@ export const aiApprovalStatusSchema = z.enum([
 export const runAssistantSchema = z.object({
   prompt: z.string().trim().min(1, 'Prompt is required').max(10000),
   sessionId: z.string().trim().min(1).max(100).default('default'),
+  threadId: z.string().trim().min(1).max(150).optional(),
+  tokenBudget: z.number().int().min(1000).max(200000).optional(),
   provider: aiProviderSchema.optional(),
   modelId: z.string().trim().min(1).max(100).optional(),
   maxSteps: z.number().int().min(1).max(8).default(5),

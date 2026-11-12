@@ -1,4 +1,4 @@
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessage, HumanMessage, isSystemMessage } from '@langchain/core/messages';
 import { tool } from '@langchain/core/tools';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
@@ -33,7 +33,7 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
     expect(bound).toBeDefined();
   });
 
-  it('executes multi-step tool workflow with MemorySaver checkpoints and token accumulation', async () => {
+  it('executes 8-step adaptive orchestrator with contextLoader, planSteps, MemorySaver checkpoints, and token tracking', async () => {
     const checkpointer = new MemorySaver();
     const invokeMock = vi
       .fn()
@@ -74,15 +74,29 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
       sessionId: 'default',
       objective: 'Please echo hello',
       checkpointer,
+      contextLoader: async () => ({
+        preferences: [{ key: 'focus', value: 'morning' }],
+        facts: [],
+        structuredMetrics: { overdueTasksCount: 3 },
+      }),
     });
 
     expect(output.interrupted).toBe(false);
+    expect(output.stopReason).toBe('COMPLETED');
     expect(output.text).toBe('Echoed: hello');
     expect(output.tokensUsed).toBe(145);
     expect(output.checkpointThreadId).toBe('thread-runtime-1');
+    expect(output.planSteps).toHaveLength(1);
+    expect(output.planSteps?.[0]?.status).toBe('COMPLETED');
     expect(output.steps).toHaveLength(2);
     expect(output.steps[0]?.toolCalls[0]?.toolName).toBe('echoTool');
     expect(output.steps[0]?.toolResults[0]?.output).toBe('pong:hello');
+
+    const firstCallMessages = invokeMock.mock.calls[0]?.[0] ?? [];
+    const systemMsg = firstCallMessages.find((msg: unknown) =>
+      isSystemMessage(msg as HumanMessage)
+    );
+    expect(String(systemMsg?.content)).toContain('overdueTasksCount=3');
 
     const savedCheckpoint = await checkpointer.getTuple(buildCheckpointConfig('thread-runtime-1'));
     expect(savedCheckpoint).toBeDefined();
@@ -183,7 +197,7 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
     expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
-  it('halts cleanly on maxIterations limit via budget guard', async () => {
+  it('halts cleanly on maxIterations limit via fallback_summary', async () => {
     const checkpointer = new MemorySaver();
     const loopingModel: RunnableChatModel = {
       bindTools: () => ({
@@ -219,8 +233,97 @@ describe('LangGraph & LangChain Agent Runtime Foundation', () => {
       checkpointer,
     });
 
+    expect(output.stopReason).toBe('MAX_ITERATIONS');
     expect(output.text).toContain('maximum reasoning iterations');
     expect(output.steps).toHaveLength(2);
+  });
+
+  it('triggers token budget guard and fallback summary before extra iterations', async () => {
+    const checkpointer = new MemorySaver();
+    const invokeMock = vi.fn().mockResolvedValueOnce(
+      new AIMessage({
+        content: '',
+        tool_calls: [{ id: 'tc-budget-1', name: 'noopTool', args: {} }],
+        usage_metadata: { input_tokens: 90, output_tokens: 20, total_tokens: 110 },
+      })
+    );
+
+    const budgetModel: RunnableChatModel = {
+      bindTools: () => ({ invoke: invokeMock }),
+      invoke: invokeMock,
+    };
+
+    const noopTool = tool(async () => 'ok', {
+      name: 'noopTool',
+      description: 'Does nothing.',
+      schema: z.object({}),
+    });
+
+    const output = await runMultiStepToolWorkflow({
+      model: budgetModel,
+      system: 'System context',
+      messages: [new HumanMessage('Check budget guard')],
+      tools: [noopTool],
+      maxSteps: 5,
+      tokenBudget: 100,
+      threadId: 'thread-budget-1',
+      executionId: 'exec-budget-1',
+      userId: 'user-1',
+      sessionId: 'default',
+      objective: 'Check budget guard',
+      checkpointer,
+    });
+
+    expect(output.stopReason).toBe('BUDGET_EXCEEDED');
+    expect(output.text).toContain('token budget');
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('trips consecutive error circuit breaker and generates fallback summary', async () => {
+    const checkpointer = new MemorySaver();
+    const invokeMock = vi.fn().mockImplementation(
+      async () =>
+        new AIMessage({
+          content: '',
+          tool_calls: [{ id: `tc-err-${Math.random()}`, name: 'failingTool', args: {} }],
+          usage_metadata: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+        })
+    );
+
+    const failingModel: RunnableChatModel = {
+      bindTools: () => ({ invoke: invokeMock }),
+      invoke: invokeMock,
+    };
+
+    const failingTool = tool(
+      async () => {
+        throw new Error('Upstream dependency failed');
+      },
+      {
+        name: 'failingTool',
+        description: 'Always throws an error.',
+        schema: z.object({}),
+      }
+    );
+
+    const output = await runMultiStepToolWorkflow({
+      model: failingModel,
+      system: 'System context',
+      messages: [new HumanMessage('Keep trying failing tool')],
+      tools: [failingTool],
+      maxSteps: 6,
+      maxConsecutiveErrors: 2,
+      threadId: 'thread-cb-1',
+      executionId: 'exec-cb-1',
+      userId: 'user-1',
+      sessionId: 'default',
+      objective: 'Test circuit breaker',
+      checkpointer,
+    });
+
+    expect(output.stopReason).toBe('CIRCUIT_BREAKER');
+    expect(output.text).toContain('consecutive tool errors');
+    expect(invokeMock).toHaveBeenCalledTimes(2);
   });
 
   it('extracts text blocks while ignoring thinking blocks and configures LangSmith safely', () => {

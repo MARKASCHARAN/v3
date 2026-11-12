@@ -29,4 +29,3 @@ export const ACCOUNTABILITY_TOOLS: V3ToolContract[] = [
     execute: (ctx) => accountabilityService.analyzeProcrastination(ctx.userId),
   } as V3ToolContract,
 ];
-

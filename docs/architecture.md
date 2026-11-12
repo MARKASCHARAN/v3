@@ -87,7 +87,7 @@ Layer responsibilities:
 The `server/src/ai/` directory separates autonomous reasoning from deterministic HTTP routing and database transactions (see [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md) for the Phase 2 hybrid architecture):
 
 - `providers/` — Model routing (`model-router.ts`) and vector embeddings (`embeddings.ts`) backed by LangChain.js + `@langchain/google-genai`.
-- `runtime/` — LangGraph.js `StateGraph` (`graph-factory.ts`), shared state (`state.ts`), and PostgreSQL checkpoints (`checkpoints.ts` via `PostgresSaver` in `langgraph` schema).
+- `runtime/` — 8-step adaptive orchestrator (`orchestrator.ts`), LangGraph.js graph helpers (`graph-factory.ts`), shared state (`state.ts`), and PostgreSQL checkpoints (`checkpoints.ts` via `PostgresSaver` in `langgraph` schema).
 - `agents/` — Central orchestrator and logical specialist roles (planning, goals, tasks, scheduling, research, memory, accountability, communication, developer, automation).
 - `tools/` — Domain-split internal/external `V3ToolContract` definitions (`internal/`, `external/`, `registry.ts`) enforced by deterministic permission guards (`risk-policy.ts`, `permission-guard.ts` covering `READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`).
 - `prompts/` — Central prompt registry (`prompt.registry.ts`) and system context builders.

@@ -65,4 +65,3 @@ export const MEMORY_TOOLS: V3ToolContract[] = [
       memoryService.createMemory(ctx.userId, input as z.infer<typeof createMemorySchema>),
   } as V3ToolContract,
 ];
-
