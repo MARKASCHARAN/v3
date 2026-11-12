@@ -1,12 +1,13 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { AppError } from '../../middleware/error.middleware';
+import { EventsService } from '../events/events.service';
 import { tasksQuerySchema } from './tasks.schema';
 import { TasksService } from './tasks.service';
 import { CreateTaskInput, UpdateTaskInput } from './tasks.types';
 
 export class TasksController {
-  private readonly tasksService = new TasksService();
+  private readonly tasksService = new TasksService(undefined, new EventsService());
 
   private getUserId(req: AuthenticatedRequest): string {
     if (!req.user?.id) {

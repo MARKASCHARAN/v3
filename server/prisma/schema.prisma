@@ -24,6 +24,8 @@ model User {
   aiExecutions         AiExecution[]
   aiToolApprovals      AiToolApproval[]
   researchItems        ResearchItem[]
+  domainEvents         DomainEvent[]
+  backgroundJobs       BackgroundJob[]
 
   @@map("users")
 }
@@ -244,6 +246,7 @@ model AiExecution {
   threadId            String           @default(uuid())
   agentRole           String           @default("MAIN_ORCHESTRATOR")
   triggerType         String           @default("REQUEST")
+  idempotencyKey      String?          @unique
   prompt              String
   status              String           @default("RUNNING")
   provider            String?
@@ -252,6 +255,7 @@ model AiExecution {
   tokensUsed          Int              @default(0)
   langsmithTraceId    String?
   checkpointNamespace String?
+  timeoutAt           DateTime?
   responseText        String?
   errorMessage        String?
   attempts            Int              @default(1)
@@ -264,6 +268,7 @@ model AiExecution {
   parentExecution     AiExecution?     @relation("ExecutionSubagents", fields: [parentExecutionId], references: [id], onDelete: SetNull)
   subagentExecutions  AiExecution[]    @relation("ExecutionSubagents")
   approvals           AiToolApproval[]
+  backgroundJobs      BackgroundJob[]
 
   @@index([threadId])
   @@index([parentExecutionId])
@@ -314,4 +319,55 @@ model ResearchItem {
   goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   @@map("research_items")
+}
+
+model DomainEvent {
+  id             String          @id @default(uuid())
+  userId         String
+  eventType      String
+  source         String
+  payload        Json
+  status         String          @default("PENDING")
+  idempotencyKey String?         @unique
+  attempts       Int             @default(0)
+  maxAttempts    Int             @default(3)
+  processedAt    DateTime?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backgroundJobs BackgroundJob[]
+
+  @@index([userId, status])
+  @@index([eventType, status])
+  @@map("domain_events")
+}
+
+model BackgroundJob {
+  id             String       @id @default(uuid())
+  userId         String
+  executionId    String?
+  domainEventId  String?
+  jobType        String
+  externalJobId  String?
+  idempotencyKey String?      @unique
+  payload        Json?
+  resultData     Json?
+  status         String       @default("QUEUED")
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(3)
+  scheduledFor   DateTime?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  lastError      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  execution      AiExecution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  domainEvent    DomainEvent? @relation(fields: [domainEventId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, scheduledFor])
+  @@index([jobType, status])
+  @@map("background_jobs")
 }

@@ -17,6 +17,8 @@ const envSchema = z.object({
   LANGSMITH_API_KEY: z.string().optional(),
   LANGSMITH_PROJECT: z.string().default('v3-backend'),
   LANGSMITH_ENDPOINT: z.string().url().default('https://api.smith.langchain.com'),
+  TRIGGER_SECRET_KEY: z.string().optional(),
+  TRIGGER_PROJECT_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   BHASHINI_UDYAT_KEY: z.string().optional(),
   BHASHINI_INFERENCE_KEY: z.string().optional(),

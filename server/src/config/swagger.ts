@@ -598,6 +598,64 @@ const swaggerDocument = {
         },
       },
     },
+    '/events': {
+      get: {
+        summary: 'List ingested domain events for the authenticated user',
+        responses: {
+          '200': { description: 'Domain events returned' },
+        },
+      },
+    },
+    '/events/subscriptions': {
+      get: {
+        summary: 'List registered event subscription routing rules',
+        responses: {
+          '200': { description: 'Subscription rules returned' },
+        },
+      },
+    },
+    '/events/ingest': {
+      post: {
+        summary: 'Ingest a domain event with idempotency deduplication and background routing',
+        responses: {
+          '201': { description: 'Domain event ingested and routed' },
+          '200': { description: 'Duplicate domain event ignored via idempotency key' },
+        },
+      },
+    },
+    '/events/jobs': {
+      get: {
+        summary: 'List background jobs tracked for the authenticated user',
+        responses: {
+          '200': { description: 'Background jobs returned' },
+        },
+      },
+    },
+    '/events/jobs/trigger': {
+      post: {
+        summary: 'Dispatch a background autonomy job via Trigger.dev or local worker execution',
+        responses: {
+          '202': { description: 'Background job queued or executed' },
+        },
+      },
+    },
+    '/events/jobs/{id}/retry': {
+      post: {
+        summary: 'Retry a failed or dead-letter background job',
+        responses: {
+          '200': { description: 'Background job retried' },
+        },
+      },
+    },
+    '/events/recovery/sweep': {
+      post: {
+        summary:
+          'Run stalled-job recovery, approval expiry sweep, and dead-letter transition sweep',
+        responses: {
+          '200': { description: 'Recovery telemetry returned' },
+        },
+      },
+    },
   },
 };
 

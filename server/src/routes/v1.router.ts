@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { accountabilityRouter } from '../modules/accountability/accountability.routes';
 import { authRouter } from '../modules/auth/auth.routes';
 import { automationRouter } from '../modules/automation/automation.routes';
+import { eventsRouter } from '../modules/events/events.routes';
 import { goalsRouter } from '../modules/goals/goals.routes';
 import { memoryRouter } from '../modules/memory/memory.routes';
 import { planningRouter } from '../modules/planning/planning.routes';
@@ -32,5 +33,6 @@ router.use('/accountability', accountabilityRouter);
 router.use('/memory', memoryRouter);
 router.use('/research', researchRouter);
 router.use('/automation', automationRouter);
+router.use('/events', eventsRouter);
 
 export const v1Router = router;

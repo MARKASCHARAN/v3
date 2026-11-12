@@ -95,6 +95,11 @@ The `server/src/ai/` directory separates autonomous reasoning from deterministic
 - `workflows/` — Retry handling (`retry.workflow.ts`) and multi-step execution pipelines.
 - `mcp/` & `evaluation/` (planned M2.8–M2.9) — Model Context Protocol connectivity and LangSmith evaluation datasets.
 
+### Background Jobs & Event Routing (`server/src/jobs/` & `server/src/modules/events/`)
+
+- `events` module — Idempotent `DomainEvent` ingestion, subscription routing rules (`EVENT_SUBSCRIPTION_RULES`), `BackgroundJob` persistence with exponential retry backoff, dead-letter transitions (`DEAD_LETTER`), and recovery endpoints (`/api/v1/events`).
+- `jobs/` (`@trigger.dev/sdk`) — Trigger.dev client configuration (`trigger.client.ts`), scheduled tasks (`daily-accountability-review`, `missed-task-scanner`, `approval-expiry-sweeper`, `dead-letter-recovery`), event workers (`missed-task-event-reaction`, `domain-event-router`), and autonomous background orchestrator runs (`autonomous-agent-run`), with local deterministic fallback when `TRIGGER_SECRET_KEY` is unconfigured.
+
 ## Client Architecture
 
 ### Web Client (`client/web/`)

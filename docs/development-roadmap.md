@@ -132,7 +132,8 @@ A functioning personal management system where users can create goals, convert t
 - [x] Implement execution history (`AiExecution` persistence with `threadId`, `parentExecutionId`, `agentRole`, `tokenBudget`, `tokensUsed`, `langsmithTraceId`)
 - [x] Implement human approval and permission checks (5-level risk policy, `AiToolApproval` with `idempotencyKey`/`expiresAt`, `/api/v1/automation/approvals/:id/approve|reject`)
 - [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, stuck-loop replanning, and circuit breaker)
-- [ ] Complete Milestone `2.7`–`2.10` hybrid architecture rollout (Trigger.dev background autonomy workers, external integrations, MCP, safety guards, and CI/CD)
+- [x] Implement background autonomy & event routing (`DomainEvent` & `BackgroundJob` Prisma models, `server/src/modules/events/`, Trigger.dev jobs under `server/src/jobs/` for daily accountability review, missed-task scans, approval expiry sweeps, background agent runs, and dead-letter recovery in M2.7)
+- [ ] Complete Milestone `2.8`–`2.10` hybrid architecture rollout (external integrations, MCP, safety guards, evaluation datasets, and CI/CD)
 
 ### B. Original Features Continued
 
@@ -284,5 +285,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.6` (Autonomous Delegation) is complete. Proceed to **Milestone `2.7` (Background Autonomy)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.7` (Background Autonomy) is complete. Proceed to **Milestone `2.8` (External Integrations)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

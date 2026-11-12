@@ -42,6 +42,9 @@ export interface RunAssistantWorkflowParams {
   modelId?: string;
   maxSteps: number;
   allowAutoApproveWrites: boolean;
+  triggerType?: 'REQUEST' | 'EVENT' | 'SCHEDULED' | 'SUBAGENT';
+  idempotencyKey?: string;
+  timeoutAt?: Date;
 }
 
 export type WorkflowExecutor = (input: {
@@ -117,8 +120,10 @@ export interface OrchestratorPersistence {
     threadId: string;
     agentRole: AgentRole;
     triggerType: string;
+    idempotencyKey?: string;
     tokenBudget: number;
     langsmithTraceId?: string;
+    timeoutAt?: Date;
     prompt: string;
     provider?: string;
     model?: string;
@@ -233,8 +238,10 @@ const prismaPersistence: OrchestratorPersistence = {
         threadId: data.threadId,
         agentRole: data.agentRole,
         triggerType: data.triggerType,
+        idempotencyKey: data.idempotencyKey,
         tokenBudget: data.tokenBudget,
         langsmithTraceId: data.langsmithTraceId,
+        timeoutAt: data.timeoutAt,
         prompt: data.prompt,
         status: 'RUNNING',
         provider: data.provider,
@@ -331,9 +338,11 @@ export class AssistantOrchestrator {
       sessionId: params.sessionId,
       threadId,
       agentRole,
-      triggerType: 'REQUEST',
+      triggerType: params.triggerType ?? 'REQUEST',
+      idempotencyKey: params.idempotencyKey,
       tokenBudget,
       langsmithTraceId,
+      timeoutAt: params.timeoutAt,
       prompt: params.prompt,
       provider: params.provider,
       model: params.modelId,

@@ -1,9 +1,13 @@
 import { AppError } from '../../middleware/error.middleware';
+import { EventsService } from '../events/events.service';
 import { TasksRepository } from './tasks.repository';
 import { CreateTaskInput, TasksQueryInput, UpdateTaskInput } from './tasks.types';
 
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository = new TasksRepository()) {}
+  constructor(
+    private readonly tasksRepository: TasksRepository = new TasksRepository(),
+    private readonly eventsService?: Pick<EventsService, 'emitSafe'>
+  ) {}
 
   private async ensureValidRelations(
     userId: string,
@@ -116,7 +120,23 @@ export class TasksService {
       completedAt = null;
     }
 
-    return this.tasksRepository.update(id, { ...data, completedAt });
+    const updated = await this.tasksRepository.update(id, { ...data, completedAt });
+
+    if (data.status === 'DONE' && existing.status !== 'DONE' && this.eventsService) {
+      await this.eventsService.emitSafe({
+        userId,
+        eventType: 'TASK_COMPLETED',
+        source: 'TASKS',
+        payload: {
+          taskId: updated.id,
+          title: updated.title,
+          goalId: updated.goalId,
+        },
+        idempotencyKey: `task-completed:${updated.id}:${updated.completedAt?.toISOString() ?? ''}`,
+      });
+    }
+
+    return updated;
   }
 
   async deleteTask(id: string, userId: string) {

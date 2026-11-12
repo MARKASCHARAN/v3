@@ -500,10 +500,10 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Evaluate `deepagents` (`1.16.4`) — recorded peer dependency conflict against `@langchain/core@1.4.0` (`langsmith@0.12.0` vs `langsmith <0.10.0`) — and implemented the selective native LangGraph deep execution harness ([`deep-harness.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/agents/deep-harness.ts) / `runDeepProjectExecution`) preserving V3 permission guards and `PostgresSaver` checkpoints.
 - [x] Add stuck-detection heuristics (`lastToolSignatures` / `STUCK_LOOP`) and orchestrator replanning edges (`observe` -> `replan` -> `reason`) in [`orchestrator.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/runtime/orchestrator.ts).
 
-### Milestone `2.7` — Background Autonomy
-- Install `@trigger.dev/sdk` (`4.8.4`) and add `DomainEvent` + `BackgroundJob` Prisma models.
-- Implement `server/src/modules/events/` (event ingestion, subscription routing, deduplication) and `server/src/jobs/` (`agent-jobs`, `scheduled-jobs`, `event-jobs`, `recovery`).
-- Add daily goal/accountability review cron, missed-task event trigger, approval expiry sweeper, and dead-letter recovery.
+### Milestone `2.7` — Background Autonomy (Completed)
+- [x] Install `@trigger.dev/sdk` (`^4.8.5`), add `trigger.config.ts`, configure `TRIGGER_SECRET_KEY` / `TRIGGER_PROJECT_ID`, and add `DomainEvent` + `BackgroundJob` + `AiExecution.idempotencyKey`/`timeoutAt` Prisma models (`20261112170500_add_domain_events_and_background_jobs`).
+- [x] Implement `server/src/modules/events/` (idempotent event ingestion, subscription routing, background job tracking, retry backoff, dead-letter transitions, and recovery sweep endpoints under `/api/v1/events`) and `TASK_COMPLETED` emission hook from `TasksService`.
+- [x] Implement `server/src/jobs/` (`trigger.client.ts`, `autonomous-agent.job.ts`, `missed-task-event.job.ts`, `event-router.job.ts`, `daily-accountability-review.job.ts`, `missed-task-scanner.job.ts`, `approval-expiry-sweeper.job.ts`, and `dead-letter-recovery.job.ts`).
 
 ### Milestone `2.8` — External Integrations
 - Implement `server/src/modules/integrations/` with AES-256-GCM encrypted token storage (`IntegrationAccount`).
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.7` (Background Autonomy)** by installing `@trigger.dev/sdk`, adding `DomainEvent` and `BackgroundJob` Prisma models, implementing `server/src/modules/events/` and `server/src/jobs/` (daily accountability review cron, missed-task trigger, approval expiry sweeper, and dead-letter recovery).
+1. Begin **Milestone `2.8` (External Integrations)** by adding `server/src/modules/integrations/` (AES-256-GCM encrypted `IntegrationAccount`), `notifications` (`Resend`, `Telegram`, `Discord`, `WhatsApp Cloud API`), `voice` (`Bhashini` ASR/TTS/translation + Supabase Storage), Google/GitHub adapters, and `server/src/ai/mcp/`.
 

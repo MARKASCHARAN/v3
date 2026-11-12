@@ -16,4 +16,10 @@ describe('V3 API Integration Tests', () => {
     expect(response.body.success).toBe(false);
     expect(response.body.error.code).toBe('NOT_FOUND');
   });
+
+  it('GET /api/v1/events/subscriptions should require authentication', async () => {
+    const response = await request(app).get('/api/v1/events/subscriptions');
+    expect(response.status).toBe(401);
+    expect(response.body.success).toBe(false);
+  });
 });

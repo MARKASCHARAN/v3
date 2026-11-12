@@ -191,6 +191,20 @@ Defined in `server/src/modules/research/research.routes.ts` and mounted on `v1Ro
 - `POST /api/v1/research/:id/save-to-memory` — Promote a stored research item into `pgvector` memory
 - `DELETE /api/v1/research/:id` — Delete a research item
 
+### `/api/v1/events` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/events/events.routes.ts` and mounted on `v1Router`:
+
+- `GET /api/v1/events/subscriptions` — List registered event-to-background-job subscription rules
+- `GET /api/v1/events` — List ingested `DomainEvent` records (`status`, `eventType`, `limit` filters)
+- `POST /api/v1/events/ingest` — Ingest a domain event with `idempotencyKey` deduplication and automatic subscription routing
+- `GET /api/v1/events/:id` — Retrieve a single domain event
+- `GET /api/v1/events/jobs` — List tracked `BackgroundJob` records (`status`, `jobType`, `limit` filters)
+- `POST /api/v1/events/jobs/trigger` — Queue or execute a background job (`AGENT_RUN`, `DAILY_ACCOUNTABILITY_REVIEW`, `MISSED_TASK_SCAN`, `APPROVAL_EXPIRY_SWEEP`, `MEMORY_PRUNE`, etc.)
+- `GET /api/v1/events/jobs/:id` — Retrieve a single background job
+- `POST /api/v1/events/jobs/:id/retry` — Retry a failed or `DEAD_LETTER` background job
+- `POST /api/v1/events/recovery/sweep` — Run stalled-job recovery, timed-out execution cleanup, expired approval sweep, and ephemeral memory pruning
+
 ## Authentication & Security Middleware
 
 - **CORS:** Restricted to `WEB_ORIGIN` (`http://localhost:3000` by default) with `credentials: true`.
