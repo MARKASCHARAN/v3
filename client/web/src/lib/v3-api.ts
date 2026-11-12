@@ -1,16 +1,46 @@
 import {
   AccountabilityLog,
   AccountabilitySummary,
+  AgentRole,
+  AiApprovalStatus,
+  AiExecution,
+  AiExecutionStatus,
+  AiObservabilityMetrics,
+  AiToolApproval,
+  AiToolMetadata,
   AuthSessionData,
   AvailableSlot,
+  BackgroundJob,
+  ConversationMessage,
+  DomainEvent,
+  EventSubscriptionRule,
+  GithubIssueSummary,
+  GithubPullRequestSummary,
+  GithubRepoSummary,
+  GmailMessageSummary,
   Goal,
   GoalStatus,
   GoalTimeframe,
+  HybridMemorySearchResult,
+  IntegrationProvider,
+  InterventionGenerationResult,
+  McpToolsSnapshot,
   MemoryCategory,
   MemoryItem,
+  MemorySourceType,
+  MemoryType,
   Milestone,
+  NotificationChannel,
+  NotificationDelivery,
+  NotificationDeliveryStatus,
+  NotificationPreference,
   Plan,
+  ProcrastinationAnalysis,
+  RecoverySweepResult,
   Reminder,
+  ResearchItem,
+  SanitizedIntegrationAccount,
+  SpecialistAgentMetadata,
   Task,
   TaskPriority,
   TaskStatus,
@@ -19,6 +49,8 @@ import {
   TimeBlockStatus,
   UserPreference,
   UserProfile,
+  VoiceCommandResult,
+  VoiceSession,
 } from '@/types/api';
 import { apiRequest } from './api-client';
 
@@ -164,6 +196,16 @@ export const accountabilityApi = {
   listLogs: () => apiRequest<AccountabilityLog[]>('/accountability/logs'),
   updateLog: (id: string, payload: { status: AccountabilityLog['status'] }) =>
     apiRequest<AccountabilityLog>(`/accountability/logs/${id}`, { method: 'PATCH', body: payload }),
+  getProcrastination: () => apiRequest<ProcrastinationAnalysis>('/accountability/procrastination'),
+  generateInterventions: (payload?: {
+    maxInterventions?: number;
+    createReminders?: boolean;
+    logAlerts?: boolean;
+  }) =>
+    apiRequest<InterventionGenerationResult>('/accountability/interventions', {
+      method: 'POST',
+      body: payload ?? { maxInterventions: 5, createReminders: false, logAlerts: true },
+    }),
 };
 
 export const memoryApi = {
@@ -183,6 +225,239 @@ export const memoryApi = {
   removePreference: (key: string) =>
     apiRequest<{ message: string }>(`/memory/preferences/${encodeURIComponent(key)}`, {
       method: 'DELETE',
+    }),
+  hybridSearch: (query: {
+    q: string;
+    category?: MemoryCategory;
+    memoryType?: MemoryType;
+    limit?: number;
+    minSimilarity?: number;
+  }) => apiRequest<HybridMemorySearchResult>('/memory/hybrid', { query }),
+  propose: (payload: {
+    title?: string;
+    content: string;
+    category?: MemoryCategory;
+    memoryType?: MemoryType;
+    sourceType?: MemorySourceType;
+    importance?: number;
+    confidence?: number;
+    autoSupersedeOnConflict?: boolean;
+  }) =>
+    apiRequest<{
+      created: boolean;
+      memory: MemoryItem;
+      supersededMemoryId?: string | null;
+      reason?: string;
+    }>('/memory/propose', { method: 'POST', body: payload }),
+  prune: () => apiRequest<{ deletedCount: number }>('/memory/prune', { method: 'POST' }),
+  backfillEmbeddings: (limit: number = 25) =>
+    apiRequest<{ processedCount: number; updatedCount: number }>('/memory/embeddings/backfill', {
+      method: 'POST',
+      body: { limit },
+    }),
+  listConversations: (sessionId: string = 'default', limit: number = 20) =>
+    apiRequest<ConversationMessage[]>('/memory/conversations', { query: { sessionId, limit } }),
+};
+
+export const automationApi = {
+  listTools: () => apiRequest<AiToolMetadata[]>('/automation/tools'),
+  listAgents: () => apiRequest<SpecialistAgentMetadata[]>('/automation/agents'),
+  getMetrics: () => apiRequest<AiObservabilityMetrics>('/automation/metrics'),
+  run: (payload: {
+    prompt: string;
+    sessionId?: string;
+    threadId?: string;
+    agentRole?: AgentRole;
+    maxSteps?: number;
+    allowAutoApproveWrites?: boolean;
+  }) => apiRequest<AiExecution>('/automation/run', { method: 'POST', body: payload }),
+  listExecutions: (query?: { status?: AiExecutionStatus; sessionId?: string; limit?: number }) =>
+    apiRequest<AiExecution[]>('/automation/executions', { query }),
+  getExecution: (id: string) => apiRequest<AiExecution>(`/automation/executions/${id}`),
+  listApprovals: (query?: { status?: AiApprovalStatus; executionId?: string; limit?: number }) =>
+    apiRequest<AiToolApproval[]>('/automation/approvals', { query }),
+  approve: (id: string, reason?: string) =>
+    apiRequest<AiToolApproval>(`/automation/approvals/${id}/approve`, {
+      method: 'POST',
+      body: reason ? { reason } : {},
+    }),
+  reject: (id: string, reason?: string) =>
+    apiRequest<AiToolApproval>(`/automation/approvals/${id}/reject`, {
+      method: 'POST',
+      body: reason ? { reason } : {},
+    }),
+};
+
+export const researchApi = {
+  list: (query?: { q?: string; goalId?: string; limit?: number }) =>
+    apiRequest<ResearchItem[]>('/research', { query }),
+  search: (payload: { query: string; urls?: string[]; goalId?: string; saveToMemory?: boolean }) =>
+    apiRequest<ResearchItem>('/research/search', { method: 'POST', body: payload }),
+  saveToMemory: (id: string) =>
+    apiRequest<{ research: ResearchItem; memory: MemoryItem }>(`/research/${id}/save-to-memory`, {
+      method: 'POST',
+    }),
+  remove: (id: string) =>
+    apiRequest<{ message: string }>(`/research/${id}`, { method: 'DELETE' }),
+};
+
+export const notificationsApi = {
+  listPreferences: () => apiRequest<NotificationPreference[]>('/notifications/preferences'),
+  upsertPreference: (payload: {
+    channel: NotificationChannel;
+    enabled?: boolean;
+    quietStart?: string | null;
+    quietEnd?: string | null;
+    frequencyCap?: number;
+  }) => apiRequest<NotificationPreference>('/notifications/preferences', { method: 'PUT', body: payload }),
+  listDeliveries: (query?: {
+    channel?: NotificationChannel;
+    status?: NotificationDeliveryStatus;
+    limit?: number;
+  }) => apiRequest<NotificationDelivery[]>('/notifications/deliveries', { query }),
+  send: (payload: {
+    channel: NotificationChannel;
+    subject?: string;
+    body: string;
+    recipient?: string;
+    bypassQuietHours?: boolean;
+  }) => apiRequest<NotificationDelivery>('/notifications/send', { method: 'POST', body: payload }),
+  retryDelivery: (id: string) =>
+    apiRequest<NotificationDelivery>(`/notifications/deliveries/${id}/retry`, { method: 'POST' }),
+};
+
+export const voiceApi = {
+  listSessions: (limit: number = 20) =>
+    apiRequest<VoiceSession[]>('/voice/sessions', { query: { limit } }),
+  transcribe: (payload: {
+    audioBase64: string;
+    sourceLanguage: string;
+    audioFormat?: 'wav' | 'mp3' | 'flac' | 'webm';
+  }) =>
+    apiRequest<{ transcript: string; sourceLanguage: string }>('/voice/transcribe', {
+      method: 'POST',
+      body: payload,
+    }),
+  translate: (payload: { text: string; sourceLanguage: string; targetLanguage: string }) =>
+    apiRequest<{ translatedText: string; sourceLanguage: string; targetLanguage: string }>(
+      '/voice/translate',
+      { method: 'POST', body: payload }
+    ),
+  synthesize: (payload: { text: string; languageCode: string; gender?: 'male' | 'female' }) =>
+    apiRequest<{
+      audioBase64: string;
+      audioFormat: string;
+      ttsAudioKey: string | null;
+      signedUrl: string | null;
+    }>('/voice/synthesize', { method: 'POST', body: payload }),
+  processCommand: (payload: {
+    transcriptText: string;
+    sourceLanguage: string;
+    targetLanguage?: string;
+    executeCommand?: boolean;
+    synthesizeReply?: boolean;
+  }) => apiRequest<VoiceCommandResult>('/voice/command', { method: 'POST', body: payload }),
+};
+
+export const integrationsApi = {
+  list: () => apiRequest<SanitizedIntegrationAccount[]>('/integrations'),
+  connect: (payload: {
+    provider: IntegrationProvider;
+    credentials: Record<string, unknown>;
+    externalAccountId?: string;
+    scopes?: string[];
+  }) =>
+    apiRequest<SanitizedIntegrationAccount>('/integrations/connect', {
+      method: 'POST',
+      body: payload,
+    }),
+  disconnect: (provider: IntegrationProvider) =>
+    apiRequest<{ disconnected: boolean; provider: string }>(`/integrations/${provider}`, {
+      method: 'DELETE',
+    }),
+  syncGoogleCalendar: () =>
+    apiRequest<{
+      syncedCount: number;
+      importedTimeBlocks: number;
+      skippedTimeBlocks: number;
+    }>('/integrations/google/calendar/sync', {
+      method: 'POST',
+      body: { maxResults: 20, importAsTimeBlocks: true },
+    }),
+  listGmailMessages: (q?: string) =>
+    apiRequest<GmailMessageSummary[]>('/integrations/google/gmail/messages', {
+      query: { q, maxResults: 10 },
+    }),
+  listGithubRepos: () => apiRequest<GithubRepoSummary[]>('/integrations/github/repos'),
+  listGithubIssues: (owner: string, repo: string, state: 'open' | 'closed' | 'all' = 'open') =>
+    apiRequest<GithubIssueSummary[]>(
+      `/integrations/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
+      { query: { state } }
+    ),
+  listGithubPullRequests: (
+    owner: string,
+    repo: string,
+    state: 'open' | 'closed' | 'all' = 'open'
+  ) =>
+    apiRequest<GithubPullRequestSummary[]>(
+      `/integrations/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,
+      { query: { state } }
+    ),
+  createGithubIssue: (payload: {
+    owner: string;
+    repo: string;
+    title: string;
+    body?: string;
+    labels?: string[];
+  }) =>
+    apiRequest<GithubIssueSummary>('/integrations/github/issues', {
+      method: 'POST',
+      body: payload,
+    }),
+  createGithubComment: (payload: {
+    owner: string;
+    repo: string;
+    issueNumber: number;
+    body: string;
+  }) =>
+    apiRequest<{ id: number; htmlUrl: string }>('/integrations/github/issues/comment', {
+      method: 'POST',
+      body: payload,
+    }),
+  listMcpTools: () => apiRequest<McpToolsSnapshot>('/integrations/mcp/tools'),
+  invokeMcpTool: (payload: {
+    serverName: string;
+    toolName: string;
+    arguments?: Record<string, unknown>;
+    allowAutoApproveWrites?: boolean;
+  }) =>
+    apiRequest<unknown>('/integrations/mcp/invoke', {
+      method: 'POST',
+      body: payload,
+    }),
+};
+
+export const eventsApi = {
+  listSubscriptions: () => apiRequest<EventSubscriptionRule[]>('/events/subscriptions'),
+  ingestEvent: (payload: {
+    eventType: string;
+    source: string;
+    payload: Record<string, unknown>;
+    idempotencyKey?: string;
+    dispatchImmediately?: boolean;
+  }) =>
+    apiRequest<{ event: DomainEvent; deduplicated: boolean; jobs: BackgroundJob[] }>(
+      '/events/ingest',
+      { method: 'POST', body: payload }
+    ),
+  listEvents: (limit: number = 20) => apiRequest<DomainEvent[]>('/events', { query: { limit } }),
+  listJobs: (limit: number = 20) =>
+    apiRequest<BackgroundJob[]>('/events/jobs', { query: { limit } }),
+  retryJob: (id: string) => apiRequest<BackgroundJob>(`/events/jobs/${id}/retry`, { method: 'POST' }),
+  runRecoverySweep: () =>
+    apiRequest<RecoverySweepResult>('/events/recovery/sweep', {
+      method: 'POST',
+      body: { staleMinutes: 30, includeApprovalExpiry: true, includeMemoryPrune: true },
     }),
 };
 

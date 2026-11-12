@@ -1,5 +1,6 @@
 'use client';
 
+import { Calendar, Clock, Trash2 } from 'lucide-react';
 import { FormEvent, useCallback, useState, useSyncExternalStore } from 'react';
 import {
   Badge,
@@ -13,11 +14,7 @@ import {
 import { useAsyncResource } from '@/hooks/use-async-resource';
 import { ApiClientError } from '@/lib/api-client';
 import { goalsApi, schedulingApi, tasksApi } from '@/lib/v3-api';
-import {
-  AvailableSlot,
-  TimeBlockCategory,
-  TimeBlockStatus,
-} from '@/types/api';
+import { AvailableSlot, TimeBlockCategory, TimeBlockStatus } from '@/types/api';
 
 const categories: TimeBlockCategory[] = [
   'WORK',
@@ -166,8 +163,10 @@ export function ScheduleView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Calendar & Time Blocks</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
+            Calendar & Time Blocks
+          </h1>
+          <p className="mt-1 text-sm text-neutral-500">
             Schedule focused time blocks with automatic overlap checks and free-slot discovery.
           </p>
         </div>
@@ -195,7 +194,10 @@ export function ScheduleView() {
       {error && <ErrorBanner message={error} />}
 
       <Card>
-        <h2 className="mb-3 text-base font-semibold">New Time Block</h2>
+        <div className="mb-3 flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-orange-500" />
+          <h2 className="text-base font-bold text-neutral-950">New Time Block</h2>
+        </div>
         <form onSubmit={handleCreateBlock} className="grid gap-3 md:grid-cols-6">
           <input
             type="text"
@@ -254,11 +256,12 @@ export function ScheduleView() {
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-neutral-700 md:col-span-2">
             <input
               type="checkbox"
               checked={allowOverlap}
               onChange={(e) => setAllowOverlap(e.target.checked)}
+              className="accent-orange-500"
             />
             Allow overlap with existing blocks
           </label>
@@ -272,10 +275,12 @@ export function ScheduleView() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
-          <h2 className="text-base font-semibold">Scheduled Blocks ({selectedDate})</h2>
+          <h2 className="text-base font-bold text-neutral-950">
+            Scheduled Blocks ({selectedDate})
+          </h2>
           {loading ? (
             <Card>
-              <p className="text-sm text-slate-500">Loading schedule...</p>
+              <p className="text-sm text-neutral-500">Loading schedule...</p>
             </Card>
           ) : blocks.length === 0 ? (
             <EmptyState
@@ -287,13 +292,13 @@ export function ScheduleView() {
               <Card key={block.id} className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold">{block.title}</span>
-                    <Badge tone="blue">{block.category}</Badge>
-                    <Badge tone={block.status === 'COMPLETED' ? 'green' : 'neutral'}>
+                    <span className="text-sm font-bold text-neutral-950">{block.title}</span>
+                    <Badge tone="orange">{block.category}</Badge>
+                    <Badge tone={block.status === 'COMPLETED' ? 'green' : 'dark'}>
                       {block.status}
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-mono text-xs text-neutral-500 tabular-nums">
                     {new Date(block.startTime).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -303,8 +308,8 @@ export function ScheduleView() {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
-                    {block.task ? ` · Task: ${block.task.title}` : ''}
-                    {block.goal ? ` · Goal: ${block.goal.title}` : ''}
+                    {block.task ? ` • Task: ${block.task.title}` : ''}
+                    {block.goal ? ` • Goal: ${block.goal.title}` : ''}
                   </p>
                 </div>
 
@@ -323,6 +328,7 @@ export function ScheduleView() {
                     ))}
                   </select>
                   <Button variant="danger" onClick={() => handleDeleteBlock(block.id)}>
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </Button>
                 </div>
@@ -332,7 +338,10 @@ export function ScheduleView() {
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-base font-semibold">Suggested Free Slots</h2>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-orange-500" />
+            <h2 className="text-base font-bold text-neutral-950">Suggested Free Slots</h2>
+          </div>
           {slots.length === 0 ? (
             <EmptyState
               title="No matching free slots"
@@ -341,9 +350,12 @@ export function ScheduleView() {
           ) : (
             <div className="space-y-2.5">
               {slots.map((slot, index) => (
-                <Card key={`${slot.startTime}-${index}`} className="flex items-center justify-between gap-3">
+                <Card
+                  key={`${slot.startTime}-${index}`}
+                  className="flex items-center justify-between gap-3"
+                >
                   <div>
-                    <p className="text-sm font-medium">
+                    <p className="font-mono text-sm font-semibold text-neutral-950 tabular-nums">
                       {new Date(slot.startTime).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -354,9 +366,9 @@ export function ScheduleView() {
                         minute: '2-digit',
                       })}
                     </p>
-                    <p className="text-xs text-slate-500">{slot.durationMinutes} min open</p>
+                    <p className="text-xs text-neutral-500">{slot.durationMinutes} min open</p>
                   </div>
-                  <Button variant="secondary" onClick={() => handleUseSlot(slot)}>
+                  <Button variant="dark" onClick={() => handleUseSlot(slot)}>
                     Use
                   </Button>
                 </Card>

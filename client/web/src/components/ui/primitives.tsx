@@ -1,13 +1,18 @@
+'use client';
+
+import { motion, useReducedMotion } from 'framer-motion';
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type BadgeTone = 'neutral' | 'blue' | 'green' | 'amber' | 'red';
+type BadgeTone = 'neutral' | 'orange' | 'blue' | 'dark' | 'green' | 'amber' | 'red';
 
 const toneClasses: Record<BadgeTone, string> = {
-  neutral: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-  blue: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-  green: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-  amber: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-  red: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+  neutral: 'border-neutral-200 bg-neutral-100 text-neutral-700',
+  orange: 'border-orange-200 bg-orange-50 text-orange-700',
+  blue: 'border-orange-200 bg-orange-50 text-orange-700',
+  dark: 'border-neutral-900 bg-neutral-950 text-white',
+  green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  amber: 'border-orange-300 bg-orange-100/80 text-orange-900',
+  red: 'border-rose-200 bg-rose-50 text-rose-700',
 };
 
 export function Card({
@@ -19,7 +24,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`v3-white-surface rounded-2xl border border-neutral-200/90 p-5 transition-colors duration-200 hover:border-neutral-300 ${className}`}
     >
       {children}
     </div>
@@ -35,7 +40,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneClasses[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${toneClasses[tone]}`}
     >
       {children}
     </span>
@@ -48,21 +53,23 @@ export function Button({
   className = '',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'dark' | 'secondary' | 'danger' | 'ghost';
 }) {
   const variantClass =
     variant === 'primary'
-      ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200'
-      : variant === 'danger'
-        ? 'bg-rose-600 text-white hover:bg-rose-700'
-        : variant === 'ghost'
-          ? 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-          : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700';
+      ? 'bg-gradient-to-b from-orange-500 to-orange-600 text-white border border-orange-500 shadow-[0_1px_0_rgba(255,255,255,0.28)_inset,0_10px_22px_-8px_rgba(249,115,22,0.55)] hover:from-orange-500 hover:to-orange-500 hover:shadow-[0_14px_26px_-8px_rgba(249,115,22,0.65)]'
+      : variant === 'dark'
+        ? 'bg-neutral-950 text-white border border-neutral-900 shadow-sm hover:bg-neutral-800'
+        : variant === 'danger'
+          ? 'bg-rose-600 text-white border border-rose-600 hover:bg-rose-700'
+          : variant === 'ghost'
+            ? 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 border border-transparent'
+            : 'border border-neutral-300 bg-white text-neutral-900 shadow-2xs hover:border-orange-400 hover:bg-orange-50/40';
 
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${variantClass} ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-45 ${variantClass} ${className}`}
     >
       {children}
     </button>
@@ -71,11 +78,15 @@ export function Button({
 
 export function ProgressBar({ value }: { value: number }) {
   const clamped = Math.max(0, Math.min(100, value));
+  const reduced = useReducedMotion();
+
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-      <div
-        className="h-full rounded-full bg-slate-900 transition-all dark:bg-emerald-400"
-        style={{ width: `${clamped}%` }}
+    <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100 ring-1 ring-inset ring-neutral-200/80">
+      <motion.div
+        initial={reduced ? false : { width: 0 }}
+        animate={{ width: `${clamped}%` }}
+        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        className="h-full rounded-full bg-gradient-to-r from-neutral-950 via-orange-600 to-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.35)]"
       />
     </div>
   );
@@ -83,7 +94,7 @@ export function ProgressBar({ value }: { value: number }) {
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-300">
+    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
       {message}
     </div>
   );
@@ -91,17 +102,16 @@ export function ErrorBanner({ message }: { message: string }) {
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center dark:border-slate-700">
-      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</p>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+    <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/70 px-6 py-10 text-center">
+      <p className="text-sm font-semibold text-neutral-900">{title}</p>
+      <p className="mt-1 text-sm text-neutral-500">{description}</p>
     </div>
   );
 }
 
 export const baseFieldClassName =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-400';
+  'rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-950 placeholder:text-neutral-400 shadow-2xs transition focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 
 export const inputClassName = `w-full ${baseFieldClassName}`;
 
 export const inlineInputClassName = `w-auto ${baseFieldClassName}`;
-

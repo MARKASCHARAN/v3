@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckCircle2, Sparkles, Trash2 } from 'lucide-react';
 import { FormEvent, useCallback, useState } from 'react';
 import {
   Badge,
@@ -85,16 +86,21 @@ export function PlanningView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">AI Goal Planning</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Decompose goals into milestones and suggested tasks, then apply them directly to your workspace.
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
+          AI Goal Decomposition Studio
+        </h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Decompose goals into milestones and suggested tasks, then materialize them transactionally.
         </p>
       </div>
 
       {error && <ErrorBanner message={error} />}
 
       <Card>
-        <h2 className="mb-3 text-base font-semibold">Generate AI Plan</h2>
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-orange-500" />
+          <h2 className="text-base font-bold text-neutral-950">Generate AI Plan</h2>
+        </div>
         <form onSubmit={handleGenerate} className="grid gap-3 md:grid-cols-2">
           <select
             value={goalId}
@@ -147,6 +153,7 @@ export function PlanningView() {
 
           <div className="md:col-span-2">
             <Button type="submit" disabled={generating}>
+              <Sparkles className="h-4 w-4" />
               {generating ? 'Generating plan...' : 'Generate Plan with AI'}
             </Button>
           </div>
@@ -155,7 +162,7 @@ export function PlanningView() {
 
       {loading ? (
         <Card>
-          <p className="text-sm text-slate-500">Loading plans...</p>
+          <p className="text-sm text-neutral-500">Loading plans...</p>
         </Card>
       ) : plans.length === 0 ? (
         <EmptyState
@@ -169,22 +176,24 @@ export function PlanningView() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-semibold">{plan.title}</h3>
-                    <Badge tone={plan.status === 'APPLIED' ? 'green' : 'amber'}>
+                    <h3 className="text-lg font-bold text-neutral-950">{plan.title}</h3>
+                    <Badge tone={plan.status === 'APPLIED' ? 'green' : 'orange'}>
                       {plan.status}
                     </Badge>
-                    {plan.model && <Badge>{plan.model}</Badge>}
+                    {plan.model && <Badge tone="dark">{plan.model}</Badge>}
                   </div>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{plan.summary}</p>
+                  <p className="mt-1 text-sm text-neutral-600">{plan.summary}</p>
                 </div>
 
                 <div className="flex gap-2">
                   {plan.status !== 'APPLIED' && (
                     <Button onClick={() => handleApplyPlan(plan.id)}>
+                      <CheckCircle2 className="h-4 w-4" />
                       Apply to Goals & Tasks
                     </Button>
                   )}
                   <Button variant="danger" onClick={() => handleDeletePlan(plan.id)}>
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </Button>
                 </div>
@@ -192,33 +201,35 @@ export function PlanningView() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                     Suggested Milestones ({plan.milestonesData.length})
                   </p>
                   {plan.milestonesData.map((m, idx) => (
                     <div
                       key={`${plan.id}-m-${idx}`}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-800"
+                      className="rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm"
                     >
-                      <p className="font-medium">
+                      <p className="font-semibold text-neutral-950">
                         {m.order + 1}. {m.title}
                       </p>
-                      {m.description && <p className="text-xs text-slate-500">{m.description}</p>}
+                      {m.description && (
+                        <p className="text-xs text-neutral-500">{m.description}</p>
+                      )}
                     </div>
                   ))}
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                     Suggested Tasks ({plan.tasksData.length})
                   </p>
                   {plan.tasksData.map((t, idx) => (
                     <div
                       key={`${plan.id}-t-${idx}`}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-800"
+                      className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm"
                     >
-                      <span>{t.title}</span>
-                      <Badge tone="blue">{t.priority}</Badge>
+                      <span className="font-medium text-neutral-900">{t.title}</span>
+                      <Badge tone="orange">{t.priority}</Badge>
                     </div>
                   ))}
                 </div>
