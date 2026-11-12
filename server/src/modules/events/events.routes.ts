@@ -39,4 +39,3 @@ router.post(
 router.get('/:id', validateRequest({ params: eventOrJobIdParamSchema }), controller.getEvent);
 
 export const eventsRouter = router;
-

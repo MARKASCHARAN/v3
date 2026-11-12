@@ -22,6 +22,14 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   BHASHINI_UDYAT_KEY: z.string().optional(),
   BHASHINI_INFERENCE_KEY: z.string().optional(),
+  INTEGRATION_ENCRYPTION_KEY: z.string().optional(),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  DISCORD_BOT_TOKEN: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_TOKEN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

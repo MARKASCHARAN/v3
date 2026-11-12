@@ -72,4 +72,3 @@ export const triggerRemoteJob = async (
     };
   }
 };
-

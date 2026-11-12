@@ -4,7 +4,7 @@ export const communicationAgent = createSpecialistAgent({
   role: 'COMMUNICATION',
   name: 'CommunicationAgent',
   description:
-    'Prepares concise briefings and outbound message drafts grounded in tasks, schedule, and memory.',
+    'Prepares briefings, reads Gmail/deliveries, syncs Google Calendar, and dispatches approval-gated notifications across Email, Telegram, Discord, and WhatsApp.',
   phase: 'PHASE_B',
   modelTier: 'ORCHESTRATION',
   promptKey: 'COMMUNICATION_AGENT',

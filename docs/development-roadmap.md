@@ -133,7 +133,8 @@ A functioning personal management system where users can create goals, convert t
 - [x] Implement human approval and permission checks (5-level risk policy, `AiToolApproval` with `idempotencyKey`/`expiresAt`, `/api/v1/automation/approvals/:id/approve|reject`)
 - [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff, token budget guard, stuck-loop replanning, and circuit breaker)
 - [x] Implement background autonomy & event routing (`DomainEvent` & `BackgroundJob` Prisma models, `server/src/modules/events/`, Trigger.dev jobs under `server/src/jobs/` for daily accountability review, missed-task scans, approval expiry sweeps, background agent runs, and dead-letter recovery in M2.7)
-- [ ] Complete Milestone `2.8`–`2.10` hybrid architecture rollout (external integrations, MCP, safety guards, evaluation datasets, and CI/CD)
+- [x] Implement external integrations, multi-channel notifications, voice & MCP (`IntegrationAccount` with AES-256-GCM encryption, `notifications` via Resend/Telegram/Discord/WhatsApp, `voice` via Bhashini ASR/TTS/translation + Supabase Storage + telephony, Google Calendar/Gmail & GitHub adapters, and permission-guarded `server/src/ai/mcp/` in M2.8)
+- [ ] Complete Milestone `2.9`–`2.10` hybrid architecture rollout (safety guards, cost/LangSmith accounting, evaluation datasets, and CI/CD)
 
 ### B. Original Features Continued
 
@@ -146,10 +147,10 @@ A functioning personal management system where users can create goals, convert t
 
 ### C. Communications and Voice
 
-| Original Feature | Work to Implement |
-| --- | --- |
-| 06. Notifications | Telegram, email, Discord, and WhatsApp integrations |
-| 07. Voice and calling | Speech input, speech output, voice commands, and telephony integration |
+| Original Feature | Work to Implement | Status |
+| --- | --- | --- |
+| 06. Notifications | Telegram, email (Resend), Discord, and WhatsApp integrations, preferences, quiet hours, frequency caps, and retry/dead-letter tracking | Done (`/api/v1/notifications/*`, `/api/v1/integrations/*`) |
+| 07. Voice and calling | Speech input (Bhashini ASR), speech output (TTS + Supabase Storage), translation, voice commands, and telephony webhook adapter | Done (`/api/v1/voice/*`) |
 
 Additional communication and voice deliverables:
 
@@ -285,5 +286,5 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 
 ## Next Phase 2 Engineering Step
 
-Milestone `2.7` (Background Autonomy) is complete. Proceed to **Milestone `2.8` (External Integrations)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
+Milestone `2.8` (External Integrations) is complete. Proceed to **Milestone `2.9` (Safety & Observability)** in [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md).
 

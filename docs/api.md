@@ -205,6 +205,48 @@ Defined in `server/src/modules/events/events.routes.ts` and mounted on `v1Router
 - `POST /api/v1/events/jobs/:id/retry` — Retry a failed or `DEAD_LETTER` background job
 - `POST /api/v1/events/recovery/sweep` — Run stalled-job recovery, timed-out execution cleanup, expired approval sweep, and ephemeral memory pruning
 
+### `/api/v1/integrations` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/integrations/integrations.routes.ts` and mounted on `v1Router`:
+
+- `GET /api/v1/integrations` — List connected `IntegrationAccount` records with credentials redacted
+- `POST /api/v1/integrations/connect` — Connect or update a provider (`TELEGRAM`, `DISCORD`, `WHATSAPP`, `GOOGLE`, `GITHUB`, `BHASHINI`) with AES-256-GCM encrypted credentials
+- `GET /api/v1/integrations/:provider` — Get sanitized integration account metadata
+- `PATCH /api/v1/integrations/:provider` — Update integration credentials, scopes, or status
+- `DELETE /api/v1/integrations/:provider` — Disconnect and delete stored provider credentials
+- `POST /api/v1/integrations/google/calendar/sync` — Fetch Google Calendar events and optionally import them into `TimeBlock`
+- `GET /api/v1/integrations/google/gmail/messages` — Read Gmail message metadata summaries
+- `GET /api/v1/integrations/github/repos` — List GitHub repositories via Octokit
+- `GET /api/v1/integrations/github/repos/:owner/:repo/issues` — List issues for a repository
+- `GET /api/v1/integrations/github/repos/:owner/:repo/pulls` — List pull requests for a repository
+- `POST /api/v1/integrations/github/issues` — Create a GitHub issue
+- `POST /api/v1/integrations/github/issues/comment` — Comment on a GitHub issue
+- `GET /api/v1/integrations/mcp/tools` — List registered MCP servers and permissioned tools
+- `POST /api/v1/integrations/mcp/invoke` — Invoke an MCP tool through `McpPermissionBridge` and `permission-guard.ts`
+
+### `/api/v1/notifications` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/notifications/notifications.routes.ts` and mounted on `v1Router`:
+
+- `GET /api/v1/notifications/preferences` — List per-channel opt-ins, quiet hours, and 24h frequency caps
+- `PUT /api/v1/notifications/preferences` — Upsert notification preferences for a channel
+- `GET /api/v1/notifications/deliveries` — List notification delivery logs (`channel`, `status`, `limit`)
+- `POST /api/v1/notifications/send` — Dispatch a notification via Resend Email, Telegram, Discord, WhatsApp Cloud API, IN_APP, or PUSH
+- `POST /api/v1/notifications/deliveries/:id/retry` — Retry a `FAILED` notification delivery (transitions to `DEAD_LETTER` once `maxAttempts` exhausted)
+
+### `/api/v1/voice` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/voice/voice.routes.ts` and mounted on `v1Router`:
+
+- `GET /api/v1/voice/sessions` — List Bhashini voice and telephony sessions
+- `POST /api/v1/voice/sessions` — Start a tracked `VoiceSession`
+- `GET /api/v1/voice/sessions/:id` — Retrieve a voice session with a signed Supabase Storage URL when `ttsAudioKey` is present
+- `POST /api/v1/voice/transcribe` — Transcribe base64 audio via Bhashini ASR
+- `POST /api/v1/voice/translate` — Translate text across languages via Bhashini
+- `POST /api/v1/voice/synthesize` — Synthesize speech via Bhashini TTS and archive WAV asset to Supabase Storage
+- `POST /api/v1/voice/command` — Run ASR + translation + `AssistantOrchestrator` + optional localized TTS pipeline
+- `POST /api/v1/voice/telephony/webhook` — Process normalized telephony webhook events (`INBOUND_CALL`, `SPEECH_CAPTURED`, `CALL_ENDED`) and return voice directives
+
 ## Authentication & Security Middleware
 
 - **CORS:** Restricted to `WEB_ORIGIN` (`http://localhost:3000` by default) with `credentials: true`.
@@ -229,10 +271,12 @@ Defined in `server/src/modules/events/events.routes.ts` and mounted on `v1Router
 
 ### Phase 2 Modules
 
-| Module | Base Path (Planned) | Scope |
+| Module | Base Path | Scope |
 | --- | --- | --- |
-| `notifications` | `/api/v1/notifications` | Channel links (Telegram, Resend email, Discord, WhatsApp), preferences, delivery logs |
-| `voice` | `/api/v1/voice` | Voice session inputs/outputs, commands, Bhashini ASR/TTS/translation pipelines |
+| `integrations` | `/api/v1/integrations` | Implemented (M2.8) — AES-256-GCM encrypted `IntegrationAccount` storage, Google Calendar/Gmail, GitHub, and guarded MCP |
+| `notifications` | `/api/v1/notifications` | Implemented (M2.8) — Channel links (Resend Email, Telegram, Discord, WhatsApp), preferences, frequency caps, retries |
+| `voice` | `/api/v1/voice` | Implemented (M2.8) — Bhashini ASR/TTS/translation, Supabase Storage audio assets, voice commands, telephony webhooks |
+| `events` | `/api/v1/events` | Implemented (M2.7) — Idempotent `DomainEvent` ingestion, Trigger.dev job dispatch, retry/dead-letter recovery |
 | `research` | `/api/v1/research` | Implemented (Phase 2 B) — Web research, summarization, SSRF-safe URL fetching, knowledge retrieval |
 | `automation` | `/api/v1/automation` | Implemented (Phase 2 A) — AI orchestrator, multi-step tool execution, approval checkpoints, execution history |
 | `accountability` (extended) | `/api/v1/accountability` | Implemented (Phase 2 B) — Adaptive accountability, procrastination detection, intelligent interventions |

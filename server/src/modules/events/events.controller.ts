@@ -118,4 +118,3 @@ export class EventsController {
     res.status(200).json({ success: true, data: result });
   };
 }
-

@@ -125,4 +125,3 @@ export const domainEventRouterTask = task({
       idempotencyKey: payload.idempotencyKey ?? null,
     }),
 });
-

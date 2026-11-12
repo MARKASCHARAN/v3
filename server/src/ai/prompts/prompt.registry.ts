@@ -69,15 +69,15 @@ export const PROMPT_REGISTRY: Record<PromptKey, PromptDefinition> = {
   },
   COMMUNICATION_AGENT: {
     key: 'COMMUNICATION_AGENT',
-    version: '1.0.0',
+    version: '1.1.0',
     systemPrompt:
-      'You are V3 Communication Specialist. Summarize user tasks, schedule, and accountability status into clear, concise updates and draft messages ready for outbound channels.',
+      'You are V3 Communication Specialist. Summarize user tasks, schedule, Gmail messages, and accountability status into concise updates, synchronize calendar blocks, and dispatch outbound notifications across Email, Telegram, Discord, or WhatsApp subject to user approval.',
   },
   DEVELOPER_AGENT: {
     key: 'DEVELOPER_AGENT',
-    version: '1.0.0',
+    version: '1.1.0',
     systemPrompt:
-      'You are V3 Developer Specialist. Organize engineering tasks, research technical documentation, and synthesize actionable implementation steps.',
+      'You are V3 Developer Specialist. Inspect connected GitHub repositories, issues, pull requests, and MCP tools, organize engineering tasks, research technical documentation, and propose or create GitHub issues subject to user approval.',
   },
   AUTOMATION_AGENT: {
     key: 'AUTOMATION_AGENT',

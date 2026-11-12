@@ -656,6 +656,178 @@ const swaggerDocument = {
         },
       },
     },
+    '/integrations': {
+      get: {
+        summary: 'List connected external integrations (credentials redacted)',
+        responses: {
+          '200': { description: 'Connected integrations returned' },
+        },
+      },
+    },
+    '/integrations/connect': {
+      post: {
+        summary: 'Connect or update an external provider using AES-256-GCM encrypted credentials',
+        responses: {
+          '201': { description: 'Integration connected' },
+        },
+      },
+    },
+    '/integrations/google/calendar/sync': {
+      post: {
+        summary: 'Sync Google Calendar events and optionally import them as V3 time blocks',
+        responses: {
+          '200': { description: 'Calendar sync completed' },
+        },
+      },
+    },
+    '/integrations/google/gmail/messages': {
+      get: {
+        summary: 'Read recent Gmail message metadata summaries',
+        responses: {
+          '200': { description: 'Gmail messages returned' },
+        },
+      },
+    },
+    '/integrations/github/repos': {
+      get: {
+        summary: 'List authenticated user GitHub repositories',
+        responses: {
+          '200': { description: 'Repositories returned' },
+        },
+      },
+    },
+    '/integrations/github/repos/{owner}/{repo}/issues': {
+      get: {
+        summary: 'List issues for a GitHub repository',
+        responses: {
+          '200': { description: 'Issues returned' },
+        },
+      },
+    },
+    '/integrations/github/repos/{owner}/{repo}/pulls': {
+      get: {
+        summary: 'List pull requests for a GitHub repository',
+        responses: {
+          '200': { description: 'Pull requests returned' },
+        },
+      },
+    },
+    '/integrations/github/issues': {
+      post: {
+        summary: 'Create an issue in a GitHub repository',
+        responses: {
+          '201': { description: 'GitHub issue created' },
+        },
+      },
+    },
+    '/integrations/mcp/tools': {
+      get: {
+        summary: 'List registered MCP servers and permissioned tools',
+        responses: {
+          '200': { description: 'MCP tools returned' },
+        },
+      },
+    },
+    '/integrations/mcp/invoke': {
+      post: {
+        summary: 'Invoke an MCP tool through the V3 permission guard',
+        responses: {
+          '200': { description: 'MCP tool executed' },
+        },
+      },
+    },
+    '/notifications/preferences': {
+      get: {
+        summary: 'List per-channel notification preferences (opt-in, quiet hours, frequency caps)',
+        responses: {
+          '200': { description: 'Preferences returned' },
+        },
+      },
+      put: {
+        summary: 'Upsert notification preferences for a channel',
+        responses: {
+          '200': { description: 'Preference saved' },
+        },
+      },
+    },
+    '/notifications/deliveries': {
+      get: {
+        summary: 'List notification delivery logs and statuses',
+        responses: {
+          '200': { description: 'Deliveries returned' },
+        },
+      },
+    },
+    '/notifications/send': {
+      post: {
+        summary: 'Dispatch a notification via Resend Email, Telegram, Discord, WhatsApp, or IN_APP',
+        responses: {
+          '201': { description: 'Notification sent or delivered' },
+        },
+      },
+    },
+    '/notifications/deliveries/{id}/retry': {
+      post: {
+        summary: 'Retry a failed notification delivery',
+        responses: {
+          '200': { description: 'Retry attempted' },
+        },
+      },
+    },
+    '/voice/sessions': {
+      get: {
+        summary: 'List Bhashini voice and telephony sessions',
+        responses: {
+          '200': { description: 'Voice sessions returned' },
+        },
+      },
+      post: {
+        summary: 'Start a new voice session',
+        responses: {
+          '201': { description: 'Voice session created' },
+        },
+      },
+    },
+    '/voice/transcribe': {
+      post: {
+        summary: 'Transcribe base64 audio using Bhashini ASR',
+        responses: {
+          '200': { description: 'Transcript returned' },
+        },
+      },
+    },
+    '/voice/translate': {
+      post: {
+        summary: 'Translate text across languages via Bhashini',
+        responses: {
+          '200': { description: 'Translated text returned' },
+        },
+      },
+    },
+    '/voice/synthesize': {
+      post: {
+        summary: 'Synthesize speech via Bhashini TTS and archive audio asset to Supabase Storage',
+        responses: {
+          '200': { description: 'Audio synthesized' },
+        },
+      },
+    },
+    '/voice/command': {
+      post: {
+        summary: 'Execute an end-to-end voice command through V3 AssistantOrchestrator',
+        responses: {
+          '200': { description: 'Voice command processed' },
+        },
+      },
+    },
+    '/voice/telephony/webhook': {
+      post: {
+        summary: 'Ingest normalized telephony inbound/speech/hangup webhook events',
+        responses: {
+          '200': { description: 'Telephony directive returned' },
+        },
+      },
+    },
   },
 };
 

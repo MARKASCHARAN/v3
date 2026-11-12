@@ -7,4 +7,3 @@ export default defineConfig({
   maxDuration: 300,
   dirs: ['./src/jobs'],
 });
-

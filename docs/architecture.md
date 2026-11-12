@@ -93,7 +93,13 @@ The `server/src/ai/` directory separates autonomous reasoning from deterministic
 - `memory/` — Hybrid SQL + PostgreSQL FTS + `pgvector` RRF retrieval (`hybrid-retrieval.ts`), candidate validation/extraction (`extraction.ts`), and lifecycle consolidation (`consolidation.ts`).
 - `prompts/` — Central prompt registry (`prompt.registry.ts`) and system context builders.
 - `workflows/` — Retry handling (`retry.workflow.ts`) and multi-step execution pipelines.
-- `mcp/` & `evaluation/` (planned M2.8–M2.9) — Model Context Protocol connectivity and LangSmith evaluation datasets.
+- `mcp/` & `evaluation/` (`evaluation/` planned M2.9) — Model Context Protocol server/client (`V3McpServer`, `McpClient`, `McpPermissionBridge` gated by `permission-guard.ts`).
+
+### Integrations, Notifications & Voice (`server/src/integrations/` & `server/src/modules/{integrations,notifications,voice}/`)
+
+- `integrations` module — AES-256-GCM encrypted credential storage (`IntegrationAccount`), Google Calendar/Gmail synchronization (`GoogleApisWorkspaceAdapter`), GitHub repo/issue/PR adapters (`OctokitGithubAdapter`), and guarded MCP discovery/invocation (`/api/v1/integrations`).
+- `notifications` module — Multi-channel dispatch via Resend Email, Telegram (`grammy`), Discord (`discord.js`), WhatsApp Cloud API, and IN_APP/PUSH with per-channel preferences, UTC quiet hours, 24h frequency caps, and retry/`DEAD_LETTER` tracking (`/api/v1/notifications`).
+- `voice` module — Bhashini ASR, translation, TTS speech synthesis archived to Supabase Storage (`voice-assets` bucket), voice command orchestration, and `StandardTelephonyAdapter` webhooks (`/api/v1/voice`).
 
 ### Background Jobs & Event Routing (`server/src/jobs/` & `server/src/modules/events/`)
 

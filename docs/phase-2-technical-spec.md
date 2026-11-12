@@ -505,11 +505,12 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 - [x] Implement `server/src/modules/events/` (idempotent event ingestion, subscription routing, background job tracking, retry backoff, dead-letter transitions, and recovery sweep endpoints under `/api/v1/events`) and `TASK_COMPLETED` emission hook from `TasksService`.
 - [x] Implement `server/src/jobs/` (`trigger.client.ts`, `autonomous-agent.job.ts`, `missed-task-event.job.ts`, `event-router.job.ts`, `daily-accountability-review.job.ts`, `missed-task-scanner.job.ts`, `approval-expiry-sweeper.job.ts`, and `dead-letter-recovery.job.ts`).
 
-### Milestone `2.8` — External Integrations
-- Implement `server/src/modules/integrations/` with AES-256-GCM encrypted token storage (`IntegrationAccount`).
-- Implement `notifications` module (`Resend`, `Telegram`, `Discord`, `WhatsApp Cloud API`) with `NotificationPreference` and `NotificationDelivery` retries.
-- Implement `voice` module (`Bhashini` ASR/TTS/translation + Supabase Storage audio assets + telephony adapter).
-- Implement Google Calendar / Gmail sync, GitHub read/issue/PR adapters, and `server/src/ai/mcp/` MCP client/server wrapper gated by `permission-guard.ts`.
+### Milestone `2.8` — External Integrations (Completed)
+- [x] Installed `resend`, `googleapis`, `grammy`, `discord.js`, `@octokit/rest` and added `IntegrationAccount`, `NotificationPreference`, `NotificationDelivery`, and `VoiceSession` Prisma models (`20261112173000_add_integrations_notifications_voice`).
+- [x] Implemented `server/src/modules/integrations/` with AES-256-GCM encrypted token storage (`integrations.crypto.ts`, redacted API DTOs), Google Calendar/Gmail sync (`google-workspace.adapter.ts`), and GitHub repo/issue/PR adapters (`github.adapter.ts`).
+- [x] Implemented `server/src/modules/notifications/` (`Resend`, `Telegram`, `Discord`, `WhatsApp Cloud API`) with channel opt-ins, quiet hours, 24h frequency caps, and retry/`DEAD_LETTER` delivery tracking under `/api/v1/notifications`.
+- [x] Implemented `server/src/modules/voice/` (`Bhashini` ASR/TTS/translation + Supabase Storage `voice-assets` bucket + `StandardTelephonyAdapter`) under `/api/v1/voice`.
+- [x] Implemented `server/src/ai/mcp/` (`V3McpServer`, `McpClient`, and `McpPermissionBridge` gated by `permission-guard.ts`), registered external tools in `server/src/ai/tools/external/`, and wired `COMMUNICATION` and `DEVELOPER` specialist profiles/prompts.
 
 ### Milestone `2.9` — Safety & Observability
 - Add prompt-injection boundary wrappers (`<untrusted_external_data>` sanitization) for emails, web pages, and GitHub issues.
@@ -523,5 +524,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.8` (External Integrations)** by adding `server/src/modules/integrations/` (AES-256-GCM encrypted `IntegrationAccount`), `notifications` (`Resend`, `Telegram`, `Discord`, `WhatsApp Cloud API`), `voice` (`Bhashini` ASR/TTS/translation + Supabase Storage), Google/GitHub adapters, and `server/src/ai/mcp/`.
+1. Begin **Milestone `2.9` (Safety & Observability)** by adding prompt-injection boundary wrappers (`<untrusted_external_data>` sanitization), token/cost accounting (`costMicroUsd`), LangSmith trace links on `AiExecution`, per-user/endpoint rate limiting, evaluation regression datasets in `server/src/ai/evaluation/`, and adversarial security tests.
 
