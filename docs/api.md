@@ -2,7 +2,7 @@
 
 V3 exposes a versioned REST API built with Express 5 and TypeScript. All feature endpoints live under the `/api/v1` prefix configured in `server/src/config/app.config.ts`.
 
-> **Implementation Status:** All Phase 1 backend modules (`/api/v1/auth`, `/api/v1/goals`, `/api/v1/planning`, `/api/v1/scheduling`, `/api/v1/tasks`, `/api/v1/accountability`, `/api/v1/memory`), core endpoints (`/`, `/api/v1/health`), Swagger UI (`/api/docs`), and auth/validation middleware are implemented. Phase 2 and Phase 3 feature modules remain pending.
+> **Implementation Status:** All Phase 1 backend modules, Phase 2 A AI/Automation (`/api/v1/automation`), and Phase 2 B modules (semantic `pgvector` memory, adaptive accountability, and web research under `/api/v1/research`) are implemented. Phase 2 C (`notifications`, `voice`) and Phase 3 modules remain pending.
 
 ## Base URL & Versioning
 
@@ -141,12 +141,17 @@ Defined in `server/src/modules/accountability/accountability.routes.ts` and moun
 - `GET /api/v1/accountability/logs` — List accountability logs (`status`, `type`)
 - `POST /api/v1/accountability/logs` — Create an accountability check-in or alert log
 - `PATCH /api/v1/accountability/logs/:id` — Acknowledge or resolve an accountability log
+- `GET /api/v1/accountability/procrastination` — Score procrastination risk signals across stale tasks, overdue priorities, and missed time blocks
+- `POST /api/v1/accountability/interventions` — Generate adaptive intervention recommendations and optional alerts/reminders
 
 ### `/api/v1/memory` (Protected — `requireAuth`)
 
 Defined in `server/src/modules/memory/memory.routes.ts` and mounted on `v1Router`:
 
 - `GET /api/v1/memory/context` — Retrieve combined user preferences, relevant memories, and recent conversation messages
+- `GET /api/v1/memory/semantic` — Semantic similarity retrieval using `pgvector` embeddings (with keyword fallback if unconfigured)
+- `POST /api/v1/memory/embeddings/backfill` — Generate `pgvector` embeddings for existing memories missing vectors
+- `GET /api/v1/memory/personalization` — Retrieve user preferences, active focus categories, and topic-relevant memories
 - `GET /api/v1/memory/preferences` — List user preferences
 - `PUT /api/v1/memory/preferences` — Upsert a user preference (`key`, `value`, `category`)
 - `DELETE /api/v1/memory/preferences/:key` — Delete a user preference
@@ -158,6 +163,29 @@ Defined in `server/src/modules/memory/memory.routes.ts` and mounted on `v1Router
 - `GET /api/v1/memory/:id` — Get a single memory item
 - `PATCH /api/v1/memory/:id` — Update a memory item
 - `DELETE /api/v1/memory/:id` — Delete a memory item
+
+### `/api/v1/automation` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/automation/automation.routes.ts` and mounted on `v1Router`:
+
+- `GET /api/v1/automation/tools` — List registered AI tools and permission policies (`AUTO_EXECUTE` vs `REQUIRE_APPROVAL`)
+- `POST /api/v1/automation/run` — Run the central AI orchestrator with conversation context, multi-step tool calling, retries, and approval gating
+- `GET /api/v1/automation/executions` — List AI execution history (`status`, `sessionId`, `limit` filters)
+- `GET /api/v1/automation/executions/:id` — Retrieve a single AI execution with step traces and approvals
+- `GET /api/v1/automation/approvals` — List tool approval requests (`status`, `executionId`, `limit` filters)
+- `POST /api/v1/automation/approvals/:id/approve` — Approve and execute a pending AI tool call
+- `POST /api/v1/automation/approvals/:id/reject` — Reject a pending AI tool call
+
+### `/api/v1/research` (Protected — `requireAuth`)
+
+Defined in `server/src/modules/research/research.routes.ts` and mounted on `v1Router`:
+
+- `POST /api/v1/research/search` — Conduct grounded web research (Google Search + SSRF-safe URL excerpt fetching), synthesize findings, and optionally save to semantic memory
+- `GET /api/v1/research` — Search and list stored research items (`q`, `goalId`, `status`, `limit`)
+- `POST /api/v1/research` — Save a manual research summary and citations
+- `GET /api/v1/research/:id` — Get a single research item
+- `POST /api/v1/research/:id/save-to-memory` — Promote a stored research item into `pgvector` memory
+- `DELETE /api/v1/research/:id` — Delete a research item
 
 ## Authentication & Security Middleware
 
@@ -187,10 +215,10 @@ Defined in `server/src/modules/memory/memory.routes.ts` and mounted on `v1Router
 | --- | --- | --- |
 | `notifications` | `/api/v1/notifications` | Channel links (Telegram, Resend email, Discord, WhatsApp), preferences, delivery logs |
 | `voice` | `/api/v1/voice` | Voice session inputs/outputs, commands, Bhashini ASR/TTS/translation pipelines |
-| `research` | `/api/v1/research` | Web research jobs, summaries, and knowledge retrieval |
-| `automation` | `/api/v1/automation` | Multi-step workflows, tool execution, approval checkpoints, execution history |
-| `accountability` (extended) | `/api/v1/accountability` | Adaptive accountability, procrastination detection, proactive interventions |
-| `memory` (extended) | `/api/v1/memory` | Long-term semantic memory retrieval via PostgreSQL + `pgvector` |
+| `research` | `/api/v1/research` | Implemented (Phase 2 B) — Web research, summarization, SSRF-safe URL fetching, knowledge retrieval |
+| `automation` | `/api/v1/automation` | Implemented (Phase 2 A) — AI orchestrator, multi-step tool execution, approval checkpoints, execution history |
+| `accountability` (extended) | `/api/v1/accountability` | Implemented (Phase 2 B) — Adaptive accountability, procrastination detection, intelligent interventions |
+| `memory` (extended) | `/api/v1/memory` | Implemented (Phase 2 B) — Long-term semantic memory retrieval via PostgreSQL + `pgvector` and personalization |
 
 ### Phase 3 Modules
 

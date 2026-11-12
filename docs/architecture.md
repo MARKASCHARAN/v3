@@ -84,13 +84,15 @@ Layer responsibilities:
 
 ### AI Orchestration Layer (`server/src/ai/`)
 
-The `server/src/ai/` directory (currently empty shells) separates AI capabilities from HTTP routing:
+The `server/src/ai/` directory separates autonomous reasoning from deterministic HTTP routing and database transactions (see [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md) for the Phase 2 hybrid architecture):
 
-- `providers/` — Provider-independent adapters built on Vercel AI SDK (`ai`, `@ai-sdk/google`, etc.).
-- `agents/` — Role-specific agents and specialist delegation introduced in Phases 2 and 3.
-- `tools/` — Structured tool definitions with schema validation and human-approval gating.
-- `prompts/` — Versioned prompt builders and system templates.
-- `workflows/` — Multi-step execution pipelines, optionally upgraded to LangGraph.js in Phase 3 when stateful checkpointing and pause/resume workflows require it.
+- `providers/` — Model routing and provider adapters (currently `@ai-sdk/google`; migrating in Milestone `2.1` to LangChain.js + `@langchain/google-genai`).
+- `runtime/` (planned M2.1–M2.3) — LangGraph.js `StateGraph`, `PostgresSaver` checkpoints, execution manager, and central orchestrator.
+- `agents/` — Central orchestrator and logical specialist roles (planning, goals, tasks, scheduling, research, memory, accountability, communication, developer, automation).
+- `tools/` — Zod-validated internal and external tools enforced by deterministic permission guards (`READ`, `INTERNAL_WRITE`, `EXTERNAL_REVERSIBLE`, `EXTERNAL_CONSEQUENTIAL`, `RESTRICTED`).
+- `prompts/` — Central prompt registry (`prompt.registry.ts`) and system context builders.
+- `workflows/` — Retry handling (`retry.workflow.ts`) and multi-step execution pipelines.
+- `mcp/` & `evaluation/` (planned M2.8–M2.9) — Model Context Protocol connectivity and LangSmith evaluation datasets.
 
 ## Client Architecture
 

@@ -49,11 +49,12 @@ Additional ideas numbered 13+ (daily briefing, opportunity radar, career agent, 
 | ORM | Prisma | Database queries and migrations |
 | Validation | Zod | API request and data validation |
 | API documentation | OpenAPI / Swagger | REST endpoint documentation |
-| Authentication | Supabase Auth (proposed) | User authentication |
-| AI integration | Vercel AI SDK + provider adapters | Model calls and tool integration |
-| Agent orchestration | LangGraph.js (later, if needed) | Stateful, multi-step agent workflows |
-| Memory search | PostgreSQL + pgvector | Semantic memory retrieval |
-| Background jobs | Trigger.dev (proposed) | Scheduled and long-running tasks |
+| Authentication | Supabase Auth | User authentication |
+| AI integration | LangChain.js (migrating from initial Vercel AI SDK in M2.1) | Model routing, prompts, and structured tools |
+| Agent orchestration | LangGraph.js + Deep Agents (selective) + LangSmith | Stateful agent runtime, checkpoints, and tracing |
+| External tool protocol | Model Context Protocol (MCP) | Standardized external tool connectivity |
+| Memory search | PostgreSQL + pgvector | Hybrid SQL, keyword, and semantic retrieval |
+| Background jobs | Trigger.dev | Scheduled, event-driven, and long-running runs |
 | File storage | Supabase Storage | Documents and attachments |
 | Email | Resend | Email notifications |
 | Voice and Indian languages | Bhashini | ASR, TTS, translation, and related services |
@@ -172,8 +173,9 @@ Install dependencies and run scripts independently inside each app directory:
 
 ## Documentation
 
-- [Development Roadmap](docs/development-roadmap.md) — Full 3-phase development plan, feature scope, and open decisions
+- [Development Roadmap](docs/development-roadmap.md) — Full 3-phase development plan, feature scope, and milestones
+- [Phase 2 Technical Specification](docs/phase-2-technical-spec.md) — Hybrid intelligence architecture, LangGraph state/agent contracts, packages, and Milestones `2.1`–`2.10`
 - [Architecture](docs/architecture.md) — Modular monolith design, backend/frontend structure, AI layer, and coding standards
-- [API Reference](docs/api.md) — Versioning, error envelope, current health endpoints, and planned module endpoints
-- [Database Guide](docs/database.md) — Supabase PostgreSQL, Prisma setup, pgvector strategy, and planned domain entities
+- [API Reference](docs/api.md) — Versioning, error envelope, current endpoints, and planned module endpoints
+- [Database Guide](docs/database.md) — Supabase PostgreSQL, Prisma setup, pgvector strategy, and domain entities
 

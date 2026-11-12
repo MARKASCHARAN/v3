@@ -2,7 +2,7 @@
 
 V3 uses **PostgreSQL** hosted on **Supabase**, accessed through **Prisma ORM** from the Express backend (`server/`).
 
-> **Implementation Status:** `server/prisma/schema.prisma`, `server/prisma.config.ts`, and `server/src/database/prisma.ts` (using Prisma `7.10.1` + `@prisma/adapter-pg`) are active. The `vector` (`pgvector`) extension is enabled in the Supabase `extensions` schema, initial migration `20261111233814_init` is applied (`server/prisma/migrations/`), and live `PrismaClient` queries are verified against Supabase PostgreSQL 17.11.
+> **Implementation Status:** `server/prisma/schema.prisma`, `server/prisma.config.ts`, and `server/src/database/prisma.ts` (using Prisma `7.10.1` + `@prisma/adapter-pg`) are active. The `vector` (`pgvector`) extension is enabled, migrations `20261111233814_init`, `20261112001415_add_ai_executions_and_approvals`, and `20261112002137_add_research_and_adaptive_accountability` are applied (`server/prisma/migrations/`), and live `PrismaClient` queries are verified against Supabase PostgreSQL 17.11.
 
 ## Connection & Environment Configuration
 
@@ -31,11 +31,14 @@ Related Supabase services configured in `env.ts`:
 - `Task` (`tasks`) — User-owned task with optional `goalId`, `milestoneId`, and `parentTaskId` (subtask self-relation), `MEDIUM` default priority, `TODO` default status, optional `dueDate`, and `completedAt` timestamp.
 - `TimeBlock` (`time_blocks`) — Scheduled user calendar block with optional `taskId`/`goalId`, `startTime`, `endTime`, `category`, `status`, and recurrence metadata.
 - `Reminder` (`reminders`) — Scheduled reminder with optional `taskId`/`goalId`, `remindAt`, `status`, `channel`, and `triggeredAt`.
-- `AccountabilityLog` (`accountability_logs`) — Missed-task alerts and check-in records (`type`, `status`, `notes`, `detectedAt`, `resolvedAt`).
+- `AccountabilityLog` (`accountability_logs`) — Missed-task alerts, procrastination signals, interventions, and check-in records (`type`, `severity`, `status`, `notes`, `metadata`, `detectedAt`, `resolvedAt`).
 - `Memory` (`memories`) — User memory entry with optional `title`, `content`, `category`, `tags`, `importance`, and `Unsupported("vector")?` embedding column reserved for `pgvector`.
 - `UserPreference` (`user_preferences`) — Key-value user preference scoped uniquely per `(userId, key)`.
 - `ConversationMessage` (`conversation_messages`) — Session-grouped conversation turn (`sessionId`, `role`, `content`, `metadata`).
 - `Plan` (`plans`) — AI-generated or manual goal decomposition storing `summary`, `status`, `milestonesData`, `tasksData`, `provider`, `model`, and `appliedAt`.
+- `AiExecution` (`ai_executions`) — AI orchestrator run tracking `sessionId`, `prompt`, `status`, `provider`, `model`, `responseText`, `errorMessage`, `attempts`, `stepsData`, and timestamps.
+- `AiToolApproval` (`ai_tool_approvals`) — Human approval queue linked to `AiExecution`, storing `toolName`, `toolArgs`, `status`, `resultData`, `errorMessage`, `decidedAt`, and `executedAt`.
+- `ResearchItem` (`research_items`) — Web research query, synthesized `title`, `summary`, `keyFindings`, `sources`, `status`, `provider`, and `model`.
 
 ## Storage & Vector Search Strategy
 

@@ -112,30 +112,33 @@ A functioning personal management system where users can create goals, convert t
 
 ## Phase 2 — Autonomous AI, Communication and Integrations
 
-**Objective:** Transform V3 from a personal management application into an intelligent assistant that can communicate and perform approved actions.
+**Objective:** Transform V3 from a personal management application into an intelligent, continuously operating assistant that combines deterministic Phase 1/2 services with autonomous multi-agent reasoning.
 
-### A. AI Intelligence
+> **Technical Specification:** See [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md) for exact packages, Prisma extensions, LangGraph state definitions, hybrid retrieval design, security rules, and Milestones `2.1`–`2.10`.
 
-- Integrate primary AI model via Vercel AI SDK
-- Build provider abstraction (`server/src/ai/providers/`)
-- Implement central AI orchestrator
-- Implement agent/tool execution framework (`server/src/ai/agents/`, `server/src/ai/tools/`)
-- Implement prompt management (`server/src/ai/prompts/`)
-- Implement conversation context
-- Implement structured tool calling
-- Implement multi-step workflows (`server/src/ai/workflows/`)
-- Implement execution history
-- Implement human approval and permission checks
-- Implement AI failure handling and retry logic
+### A. AI Intelligence (Target Architecture: LangChain.js + LangGraph.js + LangSmith)
+
+- [x] Integrate initial primary AI model (`@ai-sdk/google` + `ai`, targeted for M2.1 migration to `@langchain/google-genai` + `@langchain/langgraph`)
+- [x] Build provider abstraction (`server/src/ai/providers/model.provider.ts`, extending to `model-router.ts` in M2.1)
+- [x] Implement central AI orchestrator (`server/src/ai/agents/assistant.agent.ts`, porting to LangGraph `PostgresSaver` in M2.1–M2.3)
+- [x] Implement agent/tool execution framework (`server/src/ai/tools/v3.tools.ts`, upgrading to 5-level `risk-policy.ts` in M2.2)
+- [x] Implement prompt management (`server/src/ai/prompts/prompt.registry.ts`, `assistant.prompt.ts`, `planning.prompt.ts`)
+- [x] Implement conversation context (preferences, memories, workload snapshot, and `ConversationMessage` history)
+- [x] Implement structured tool calling (`V3_TOOL_REGISTRY` with Zod `inputSchema` validation)
+- [x] Implement multi-step workflows (`server/src/ai/workflows/execution.workflow.ts`, migrating to LangGraph `StateGraph` in M2.1)
+- [x] Implement execution history (`AiExecution` persistence + `/api/v1/automation/executions`)
+- [x] Implement human approval and permission checks (`REQUIRE_APPROVAL` policy, `AiToolApproval` queue, `/api/v1/automation/approvals/:id/approve|reject`)
+- [x] Implement AI failure handling and retry logic (`server/src/ai/workflows/retry.workflow.ts` exponential backoff)
+- [ ] Complete Milestone `2.1`–`2.10` hybrid architecture rollout (`PostgresSaver` checkpoints, LangSmith tracing, specialist agents, Deep Agents selective harness, hybrid SQL/FTS/vector retrieval, Trigger.dev workers, MCP, and integrations)
 
 ### B. Original Features Continued
 
-| Original Feature | Work to Implement |
-| --- | --- |
-| 05. Accountability | Adaptive accountability, procrastination detection, and intelligent interventions |
-| 08. Memory | Long-term memory, semantic retrieval (`pgvector`), and personalization |
-| 09. Research | Web research, summarization, and knowledge retrieval |
-| 11. Automation | Multi-step workflows and autonomous tool execution |
+| Original Feature | Work to Implement | Status |
+| --- | --- | --- |
+| 05. Accountability | Adaptive accountability, procrastination detection, and intelligent interventions | Done (`/api/v1/accountability/procrastination`, `/api/v1/accountability/interventions`) |
+| 08. Memory | Long-term memory, semantic retrieval (`pgvector`), and personalization | Done (`/api/v1/memory/semantic`, `/api/v1/memory/embeddings/backfill`, `/api/v1/memory/personalization`) |
+| 09. Research | Web research, summarization, and knowledge retrieval | Done (`/api/v1/research`, `/api/v1/research/search`, `/api/v1/research/:id/save-to-memory`) |
+| 11. Automation | Multi-step workflows and autonomous tool execution | Done (AI orchestrator, tool execution, approval checkpoints & history under `/api/v1/automation`) |
 
 ### C. Communications and Voice
 
@@ -259,24 +262,24 @@ A complete V3 ecosystem featuring web and mobile clients, developer assistant, a
 2. **Phase 2 — Intelligence and Communication:** AI agents, semantic memory, adaptive accountability, research, voice (Bhashini), multi-channel notifications, background jobs, cloud infra, and automation workflows.
 3. **Phase 3 — Advanced Autonomy and Mobile:** GitHub developer assistant, advanced stateful agent workflows, analytics, Expo mobile application, testing, security, and production hardening.
 
-## Open Decisions Pending Finalization
+## Finalized Phase 2 Architecture Decisions
 
-These proposed choices remain open for final confirmation before database schema design and feature implementation begin:
-
-| Decision Area | Current Recommendation |
+| Decision Area | Confirmed Selection |
 | --- | --- |
 | Database | Supabase PostgreSQL |
 | ORM | Prisma |
 | Authentication | Supabase Auth |
-| AI provider | Provider-independent integration |
-| AI framework | Start simple; LangGraph.js later if needed |
+| AI integration & tools | LangChain.js + `@langchain/google-genai` (replacing initial `ai` prototype in M2.1) |
+| Agent runtime | LangGraph.js + `PostgresSaver` checkpoints (`Deep Agents` selectively in M2.6) |
+| Agent observability | LangSmith |
+| External tool protocol | Model Context Protocol (MCP) behind V3 permissions |
 | Background jobs | Trigger.dev |
 | API | REST with OpenAPI |
-| Memory | PostgreSQL + pgvector |
-| Mobile | Expo + React Native |
+| Memory | PostgreSQL + `pgvector` (hybrid SQL + keyword + vector search) |
+| Mobile | Expo + React Native (Phase 3) |
 | Deployment | Managed cloud hosting |
 
-## Next Step Before Feature Coding
+## Next Step Before Phase 2 Runtime Coding
 
-Review and confirm or rearrange the three-phase allocation above. Once finalized, complete database schema modeling, dependency verification, and middleware setup before implementing Phase 1 modules.
+Review [`docs/phase-2-technical-spec.md`](phase-2-technical-spec.md) and commit the deterministic Phase 2 B checkpoint (`pgvector` memory, adaptive accountability, research, and approval tables), then begin **Milestone `2.1` (Agent Runtime Foundation)**.
 
