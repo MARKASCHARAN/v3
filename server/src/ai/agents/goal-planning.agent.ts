@@ -8,4 +8,3 @@ export const goalPlanningAgent = createSpecialistAgent({
   modelTier: 'PLANNING',
   promptKey: 'GOAL_PLANNING_AGENT',
 });
-

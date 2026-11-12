@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { aiConfig, configureLangSmithRuntime } from '../../config/ai.config';
 import { prisma } from '../../database/prisma';
 import { buildAssistantSystemContext } from '../prompts/assistant.prompt';
+import { retrieveHybridMemoryContext, toRetrievedContextSlice } from '../memory/hybrid-retrieval';
 import { AiProviderName, ModelTaskTier, resolveChatModel } from '../providers/model-router';
 import { ensurePostgresCheckpointer } from '../runtime/checkpoints';
 import { GraphApprovalPolicy } from '../runtime/graph-factory';
@@ -387,7 +388,22 @@ export class AssistantOrchestrator {
       },
     });
 
-    const contextLoader: ContextLoaderFn = async () => mapLoadedContextToSlice(context);
+    const contextLoader: ContextLoaderFn = async () => {
+      if (this.persistence !== prismaPersistence) {
+        return mapLoadedContextToSlice(context);
+      }
+
+      try {
+        const hybrid = await retrieveHybridMemoryContext({
+          userId: params.userId,
+          query: params.prompt,
+          limit: 12,
+        });
+        return toRetrievedContextSlice(hybrid);
+      } catch {
+        return mapLoadedContextToSlice(context);
+      }
+    };
 
     const tools = specialist
       ? baseTools

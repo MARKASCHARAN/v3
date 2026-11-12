@@ -5,6 +5,7 @@ import {
   backfillEmbeddingsSchema,
   contextQuerySchema,
   conversationQuerySchema,
+  hybridSearchQuerySchema,
   memoryQuerySchema,
   personalizationQuerySchema,
   semanticSearchQuerySchema,
@@ -13,6 +14,7 @@ import { MemoryService } from './memory.service';
 import {
   CreateConversationMessageInput,
   CreateMemoryInput,
+  ProposeMemoryInput,
   UpdateMemoryInput,
   UpsertPreferenceInput,
 } from './memory.types';
@@ -47,6 +49,26 @@ export class MemoryController {
     const query = semanticSearchQuerySchema.parse(req.query);
     const results = await this.memoryService.semanticSearch(userId, query);
     res.status(200).json({ success: true, data: results });
+  };
+
+  hybridSearch = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const query = hybridSearchQuerySchema.parse(req.query);
+    const results = await this.memoryService.hybridSearch(userId, query);
+    res.status(200).json({ success: true, data: results });
+  };
+
+  proposeMemory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const outcome = await this.memoryService.proposeMemory(userId, req.body as ProposeMemoryInput);
+    const statusCode = outcome.action === 'CREATED' || outcome.action === 'SUPERSEDED' ? 201 : 200;
+    res.status(statusCode).json({ success: true, data: outcome });
+  };
+
+  pruneExpired = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = this.getUserId(req);
+    const summary = await this.memoryService.pruneExpiredMemories(userId);
+    res.status(200).json({ success: true, data: summary });
   };
 
   backfillEmbeddings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

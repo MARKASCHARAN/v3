@@ -1,4 +1,10 @@
-import { generateTextEmbedding } from '../../ai/providers/embeddings';
+import { MemoryConsolidationService } from '../../ai/memory/consolidation';
+import { retrieveHybridMemoryContext } from '../../ai/memory/hybrid-retrieval';
+import {
+  buildMemoryEmbeddingText,
+  formatVectorLiteral,
+  generateTextEmbedding,
+} from '../../ai/providers/embeddings';
 import { AppError } from '../../middleware/error.middleware';
 import { MemoryRepository } from './memory.repository';
 import {
@@ -7,29 +13,16 @@ import {
   CreateConversationMessageInput,
   CreateMemoryInput,
   EmbeddingGenerator,
+  HybridSearchQueryInput,
   MemoryQueryInput,
   PersonalizationQueryInput,
+  ProposeMemoryInput,
   SemanticSearchQueryInput,
   UpdateMemoryInput,
   UpsertPreferenceInput,
 } from './memory.types';
 
-export const formatVectorLiteral = (embedding: number[]): string => `[${embedding.join(',')}]`;
-
-export const buildMemoryEmbeddingText = (memory: {
-  title?: string | null;
-  category: string;
-  tags?: string[];
-  content: string;
-}): string => {
-  const parts = [
-    `[${memory.category}]`,
-    memory.title ?? '',
-    memory.tags && memory.tags.length > 0 ? `Tags: ${memory.tags.join(', ')}` : '',
-    memory.content,
-  ].filter(Boolean);
-  return parts.join(' ');
-};
+export { buildMemoryEmbeddingText, formatVectorLiteral };
 
 const defaultEmbeddingGenerator: EmbeddingGenerator = {
   embedDocument: (text) => generateTextEmbedding(text, 'RETRIEVAL_DOCUMENT'),
@@ -37,10 +30,17 @@ const defaultEmbeddingGenerator: EmbeddingGenerator = {
 };
 
 export class MemoryService {
+  private readonly consolidationService: MemoryConsolidationService;
+
   constructor(
     private readonly memoryRepository: MemoryRepository = new MemoryRepository(),
     private readonly embeddingGenerator: EmbeddingGenerator = defaultEmbeddingGenerator
-  ) {}
+  ) {
+    this.consolidationService = new MemoryConsolidationService(
+      this.memoryRepository,
+      this.embeddingGenerator
+    );
+  }
 
   private async trySyncMemoryEmbedding(memory: {
     id: string;
@@ -66,6 +66,14 @@ export class MemoryService {
     const memory = await this.memoryRepository.createMemory(userId, data);
     await this.trySyncMemoryEmbedding(memory);
     return memory;
+  }
+
+  async proposeMemory(userId: string, data: ProposeMemoryInput) {
+    return this.consolidationService.proposeAndPersistMemory(userId, data);
+  }
+
+  async pruneExpiredMemories(userId: string) {
+    return this.consolidationService.pruneExpiredMemories(userId);
   }
 
   async getMemories(userId: string, filters: Partial<MemoryQueryInput> = {}) {
@@ -100,6 +108,7 @@ export class MemoryService {
         formatVectorLiteral(vector),
         {
           category: query.category,
+          memoryType: query.memoryType,
           limit: query.limit,
           minSimilarity: query.minSimilarity,
         }
@@ -116,6 +125,7 @@ export class MemoryService {
       const keywordMatches = await this.memoryRepository.findMemories(userId, {
         q: query.q,
         category: query.category,
+        memoryType: query.memoryType,
         limit: query.limit,
       });
 
@@ -129,6 +139,7 @@ export class MemoryService {
         const keywordMatches = await this.memoryRepository.findMemories(userId, {
           q: query.q,
           category: query.category,
+          memoryType: query.memoryType,
           limit: query.limit,
         });
         return {
@@ -139,6 +150,23 @@ export class MemoryService {
       }
       throw error;
     }
+  }
+
+  async hybridSearch(userId: string, query: HybridSearchQueryInput) {
+    return retrieveHybridMemoryContext(
+      {
+        userId,
+        query: query.q,
+        category: query.category,
+        memoryType: query.memoryType,
+        limit: query.limit,
+        minSimilarity: query.minSimilarity,
+      },
+      {
+        repository: this.memoryRepository,
+        embedQuery: (text) => this.embeddingGenerator.embedQuery(text),
+      }
+    );
   }
 
   async backfillEmbeddings(userId: string, limit: number = 25) {

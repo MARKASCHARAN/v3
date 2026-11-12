@@ -407,6 +407,30 @@ const swaggerDocument = {
         },
       },
     },
+    '/memory/hybrid': {
+      get: {
+        summary: 'Hybrid SQL, full-text keyword, and pgvector RRF memory search',
+        responses: {
+          '200': { description: 'Hybrid ranked memories and metrics returned' },
+        },
+      },
+    },
+    '/memory/propose': {
+      post: {
+        summary: 'Validate, deduplicate, and propose a candidate memory with supersession tracking',
+        responses: {
+          '201': { description: 'Candidate memory persisted or superseded existing entry' },
+        },
+      },
+    },
+    '/memory/prune': {
+      post: {
+        summary: 'Prune expired ephemeral memory records',
+        responses: {
+          '200': { description: 'Expired memories pruned' },
+        },
+      },
+    },
     '/memory/embeddings/backfill': {
       post: {
         summary: 'Generate pgvector embeddings for existing memories missing vectors',

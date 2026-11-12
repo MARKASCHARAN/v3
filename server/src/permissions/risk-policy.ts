@@ -58,6 +58,8 @@ export const AGENT_PERMISSION_PROFILES: Record<AgentRole, AgentPermissionProfile
       'webResearch',
       'searchMemory',
       'semanticSearchMemory',
+      'hybridSearchMemory',
+      'proposeMemory',
       'saveMemory',
       'listGoals',
     ],
@@ -68,7 +70,13 @@ export const AGENT_PERMISSION_PROFILES: Record<AgentRole, AgentPermissionProfile
   MEMORY: {
     role: 'MEMORY',
     allowedReadDomains: ['memory'],
-    allowedTools: ['searchMemory', 'semanticSearchMemory', 'saveMemory'],
+    allowedTools: [
+      'searchMemory',
+      'semanticSearchMemory',
+      'hybridSearchMemory',
+      'proposeMemory',
+      'saveMemory',
+    ],
     autoApprovedRiskLevels: ['READ'],
     maxIterations: 5,
     maxTokenBudget: 25000,

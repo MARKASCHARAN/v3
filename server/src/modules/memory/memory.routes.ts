@@ -8,10 +8,12 @@ import {
   conversationQuerySchema,
   createConversationMessageSchema,
   createMemorySchema,
+  hybridSearchQuerySchema,
   memoryIdParamSchema,
   memoryQuerySchema,
   personalizationQuerySchema,
   preferenceKeyParamSchema,
+  proposeMemorySchema,
   semanticSearchQuerySchema,
   updateMemorySchema,
   upsertPreferenceSchema,
@@ -28,6 +30,16 @@ router.get(
   validateRequest({ query: semanticSearchQuerySchema }),
   controller.semanticSearch
 );
+router.get('/hybrid', validateRequest({ query: hybridSearchQuerySchema }), controller.hybridSearch);
+router.post('/propose', validateRequest({ body: proposeMemorySchema }), controller.proposeMemory);
+router.post('/prune', controller.pruneExpired);
+router.get(
+  '/hybrid',
+  validateRequest({ query: hybridSearchQuerySchema }),
+  controller.hybridSearch
+);
+router.post('/propose', validateRequest({ body: proposeMemorySchema }), controller.proposeMemory);
+router.post('/prune', controller.pruneExpired);
 router.post(
   '/embeddings/backfill',
   validateRequest({ body: backfillEmbeddingsSchema }),

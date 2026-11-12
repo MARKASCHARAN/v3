@@ -163,18 +163,29 @@ model AccountabilityLog {
 }
 
 model Memory {
-  id         String                  @id @default(uuid())
-  userId     String
-  title      String?
-  content    String
-  category   String                  @default("GENERAL")
-  tags       String[]                @default([])
-  importance Int                     @default(1)
-  embedding  Unsupported("vector")?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
-  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String                        @id @default(uuid())
+  userId         String
+  title          String?
+  content        String
+  category       String                        @default("GENERAL")
+  memoryType     String                        @default("SEMANTIC")
+  sourceType     String                        @default("MANUAL")
+  sourceId       String?
+  tags           String[]                      @default([])
+  importance     Int                           @default(1)
+  confidence     Float                         @default(1.0)
+  expiresAt      DateTime?
+  supersededById String?
+  embedding      Unsupported("vector(768)")?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+  user           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supersededBy   Memory?                       @relation("MemorySupersession", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes     Memory[]                      @relation("MemorySupersession")
 
+  @@index([userId, memoryType])
+  @@index([userId, expiresAt])
+  @@index([supersededById])
   @@map("memories")
 }
 

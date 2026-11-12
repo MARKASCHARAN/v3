@@ -150,6 +150,9 @@ Defined in `server/src/modules/memory/memory.routes.ts` and mounted on `v1Router
 
 - `GET /api/v1/memory/context` — Retrieve combined user preferences, relevant memories, and recent conversation messages
 - `GET /api/v1/memory/semantic` — Semantic similarity retrieval using `pgvector` embeddings (with keyword fallback if unconfigured)
+- `GET /api/v1/memory/hybrid` — Run parallel structured SQL metrics, PostgreSQL GIN full-text keyword search, and `pgvector` semantic search merged via Reciprocal Rank Fusion (RRF)
+- `POST /api/v1/memory/propose` — Validate, deduplicate, and persist a candidate memory with automatic conflict detection and `supersededById` linking
+- `POST /api/v1/memory/prune` — Delete expired ephemeral memories (`expiresAt <= now`) for the authenticated user
 - `POST /api/v1/memory/embeddings/backfill` — Generate `pgvector` embeddings for existing memories missing vectors
 - `GET /api/v1/memory/personalization` — Retrieve user preferences, active focus categories, and topic-relevant memories
 - `GET /api/v1/memory/preferences` — List user preferences

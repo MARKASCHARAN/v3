@@ -490,10 +490,10 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
   - Phase B specialists: `communication`, `developer` (with `AUTOMATION` handled by `AssistantOrchestrator` / `AGENT_PERMISSION_PROFILES`).
 - [x] Assign each specialist a scoped `AgentPermissionProfile` and distinct prompt template in [`prompt.registry.ts`](file:///Users/markasaicharan/PROJECTS/v3/server/src/ai/prompts/prompt.registry.ts), plus `delegateToSpecialist` orchestration tool and `GET /api/v1/automation/agents`.
 
-### Milestone `2.5` — Hybrid Data & Memory
-- Narrow `memories.embedding` to `vector(768)` and add HNSW cosine + PostgreSQL GIN full-text indexes via Prisma SQL migration.
-- Implement `server/src/ai/memory/hybrid-retrieval.ts` (SQL + FTS + `pgvector` RRF fusion), `extraction.ts`, and `consolidation.ts`.
-- Add memory lifecycle fields (`memoryType`, `sourceType`, `confidence`, `expiresAt`, `supersededById`) and candidate memory validation rules.
+### Milestone `2.5` — Hybrid Data & Memory (Completed)
+- [x] Narrow `memories.embedding` to `vector(768)` and add HNSW cosine (`memories_embedding_hnsw_idx`) + PostgreSQL GIN full-text (`memories_fts_gin_idx`) indexes via Prisma SQL migration (`20261112102033_add_hybrid_memory_lifecycle_and_indexes`).
+- [x] Implement `server/src/ai/memory/hybrid-retrieval.ts` (SQL + FTS + `pgvector` RRF fusion), `extraction.ts`, and `consolidation.ts`.
+- [x] Add memory lifecycle fields (`memoryType`, `sourceType`, `sourceId`, `confidence`, `expiresAt`, `supersededById`), candidate memory validation/supersession rules, `/api/v1/memory/{hybrid,propose,prune}`, and `hybridSearchMemory`/`proposeMemory` tools.
 
 ### Milestone `2.6` — Autonomous Delegation
 - Implement parallel subagent execution and isolated subagent threads (`parentExecutionId` linked to parent `AiExecution`).
@@ -523,5 +523,5 @@ with $k = 60$, user-scoped filtering enforced in SQL before fusion, and strict s
 
 ## 10. Immediate Next Action Checklist
 
-1. Begin **Milestone `2.5` (Hybrid Data & Memory)** by narrowing `memories.embedding` to `vector(768)` with HNSW cosine + PostgreSQL GIN full-text indexes, adding lifecycle fields (`memoryType`, `sourceType`, `confidence`, `expiresAt`, `supersededById`), and implementing `server/src/ai/memory/{hybrid-retrieval,extraction,consolidation}.ts`.
+1. Begin **Milestone `2.6` (Autonomous Delegation)** by adding `parentExecutionId` on `AiExecution`, implementing parallel subagent execution with isolated subagent threads, selectively integrating `deepagents` (`1.16.4`) for deep multi-step research, and adding stuck-detection + orchestrator replanning edges.
 

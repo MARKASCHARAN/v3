@@ -8,28 +8,73 @@ export const memoryCategorySchema = z.enum([
   'FACT',
 ]);
 
+export const memoryTypeSchema = z.enum([
+  'CONVERSATION',
+  'EPISODIC',
+  'SEMANTIC',
+  'PROCEDURAL',
+  'PROJECT',
+]);
+
+export const memorySourceTypeSchema = z.enum([
+  'MANUAL',
+  'CONVERSATION',
+  'RESEARCH',
+  'EMAIL',
+  'GITHUB',
+  'EVENT',
+]);
+
 export const messageRoleSchema = z.enum(['USER', 'ASSISTANT', 'SYSTEM']);
 
 export const createMemorySchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   content: z.string().trim().min(1, 'Memory content is required').max(10000),
   category: memoryCategorySchema.default('GENERAL'),
+  memoryType: memoryTypeSchema.default('SEMANTIC'),
+  sourceType: memorySourceTypeSchema.default('MANUAL'),
+  sourceId: z.string().trim().min(1).max(200).optional(),
   tags: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
   importance: z.number().int().min(1).max(5).default(1),
+  confidence: z.number().min(0).max(1).default(1.0),
+  expiresAt: z.coerce.date().optional(),
+});
+
+export const proposeMemorySchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  content: z.string().trim().min(1, 'Memory content is required').max(10000),
+  category: memoryCategorySchema.default('FACT'),
+  memoryType: memoryTypeSchema.default('SEMANTIC'),
+  sourceType: memorySourceTypeSchema.default('CONVERSATION'),
+  sourceId: z.string().trim().min(1).max(200).optional(),
+  tags: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
+  importance: z.number().int().min(1).max(5).default(2),
+  confidence: z.number().min(0).max(1).default(0.85),
+  expiresAt: z.coerce.date().optional(),
+  autoSupersedeOnConflict: z.boolean().default(true),
 });
 
 export const updateMemorySchema = z.object({
   title: z.string().trim().min(1).max(200).nullable().optional(),
   content: z.string().trim().min(1).max(10000).optional(),
   category: memoryCategorySchema.optional(),
+  memoryType: memoryTypeSchema.optional(),
+  sourceType: memorySourceTypeSchema.optional(),
+  sourceId: z.string().trim().min(1).max(200).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
   importance: z.number().int().min(1).max(5).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  expiresAt: z.coerce.date().nullable().optional(),
+  supersededById: z.string().uuid().nullable().optional(),
 });
 
 export const memoryQuerySchema = z.object({
   category: memoryCategorySchema.optional(),
+  memoryType: memoryTypeSchema.optional(),
   q: z.string().trim().min(1).max(200).optional(),
   tag: z.string().trim().min(1).max(50).optional(),
+  includeExpired: z.enum(['true', 'false']).optional(),
+  includeSuperseded: z.enum(['true', 'false']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
@@ -60,8 +105,17 @@ export const contextQuerySchema = z.object({
 export const semanticSearchQuerySchema = z.object({
   q: z.string().trim().min(1, 'Search query is required').max(1000),
   category: memoryCategorySchema.optional(),
+  memoryType: memoryTypeSchema.optional(),
   limit: z.coerce.number().int().min(1).max(50).default(10),
   minSimilarity: z.coerce.number().min(0).max(1).default(0.3),
+});
+
+export const hybridSearchQuerySchema = z.object({
+  q: z.string().trim().min(1, 'Search query is required').max(1000),
+  category: memoryCategorySchema.optional(),
+  memoryType: memoryTypeSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  minSimilarity: z.coerce.number().min(0).max(1).default(0.25),
 });
 
 export const personalizationQuerySchema = z.object({

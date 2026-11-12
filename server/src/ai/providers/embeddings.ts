@@ -25,6 +25,23 @@ export interface EmbeddingModelDescriptor {
 export const DEFAULT_EMBEDDING_DIMENSIONS = aiConfig.embeddingDimensions;
 export const DEFAULT_EMBEDDING_MODEL = MODEL_BY_TIER.EMBEDDING;
 
+export const formatVectorLiteral = (embedding: number[]): string => `[${embedding.join(',')}]`;
+
+export const buildMemoryEmbeddingText = (memory: {
+  title?: string | null;
+  category: string;
+  tags?: string[];
+  content: string;
+}): string => {
+  const parts = [
+    `[${memory.category}]`,
+    memory.title ?? '',
+    memory.tags && memory.tags.length > 0 ? `Tags: ${memory.tags.join(', ')}` : '',
+    memory.content,
+  ].filter(Boolean);
+  return parts.join(' ');
+};
+
 export const resolveEmbeddingModel = (
   options: EmbeddingResolutionOptions = {}
 ): EmbeddingModelDescriptor => {
